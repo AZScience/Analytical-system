@@ -55,7 +55,7 @@ def get_user_limits(email: str):
         records = ws.get_all_records()
     except Exception as e:
         st.warning(f"Lỗi kết nối hoặc đọc Google Sheets: {e}")
-        max_lim = 9999 if email == "ngviphuc@gmail.com" else 3
+        max_lim = 9999 if email == "ngviphuc@gmail.com" else 1
         return {"Email": email, "UsageCount": 0, "MaxLimit": max_lim}
         
     # Tìm email trong records (không phân biệt hoa thường và khoảng trắng)
@@ -68,7 +68,7 @@ def get_user_limits(email: str):
             
     if user_row is None:
         # Nếu chưa tồn tại, tạo mới
-        max_lim = 9999 if email == "ngviphuc@gmail.com" else 3
+        max_lim = 9999 if email == "ngviphuc@gmail.com" else 1
         new_row = [email, 0, max_lim]
         try:
             ws.append_row(new_row)
@@ -79,10 +79,10 @@ def get_user_limits(email: str):
     # Nếu tồn tại, parse các giá trị
     try:
         usage_cnt = int(float(user_row.get("UsageCount", 0)))
-        max_lim = int(float(user_row.get("MaxLimit", 3)))
+        max_lim = int(float(user_row.get("MaxLimit", 1)))
     except Exception:
         usage_cnt = 0
-        max_lim = 9999 if email == "ngviphuc@gmail.com" else 3
+        max_lim = 9999 if email == "ngviphuc@gmail.com" else 1
         
     return {"Email": email, "UsageCount": usage_cnt, "MaxLimit": max_lim}
 
@@ -121,7 +121,7 @@ def increment_usage(email: str):
             return False
     else:
         # Nếu chưa tồn tại trong sheet
-        max_lim = 9999 if email == "ngviphuc@gmail.com" else 3
+        max_lim = 9999 if email == "ngviphuc@gmail.com" else 1
         new_row = [email, 1, max_lim]
         try:
             ws.append_row(new_row)
