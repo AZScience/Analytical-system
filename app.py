@@ -1912,7 +1912,7 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
     elif id_method == "Tải file bài luận":
         uploaded_essay = st.file_uploader("📂 Tải file bài luận (.txt, .docx, .pdf):", type=["txt", "docx", "pdf"], key="essay_uploader")
         
-        auto_detect = st.checkbox("🤖 AI tự động nhận diện trình độ", value=True, key="auto_detect_lvl")
+        auto_detect = st.checkbox("🤖 Hệ thống tự động nhận diện trình độ", value=True, key="auto_detect_lvl")
         
         if not auto_detect:
             level_keys = list(LEVEL_LABELS_AI.keys())
@@ -1925,7 +1925,7 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
                                   key="ai_level_input_2")
             st.session_state.ai_level_val = ai_level
         else:
-            st.info("AI sẽ tự động nhận diện trình độ từ nội dung file.")
+            st.info("Hệ thống sẽ tự động nhận diện trình độ từ nội dung file.")
         
         run_ai = st.button("🚀 Phân tích file bài luận", use_container_width=True, type="primary", key="btn_run_ai_file")
         
