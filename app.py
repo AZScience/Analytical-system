@@ -1030,6 +1030,55 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ─────────────────────────────────────────────────────────────────────────────
+# XÁC THỰC NGƯỜI DÙNG (AUTHENTICATION)
+# ─────────────────────────────────────────────────────────────────────────────
+try:
+    import auth_manager
+    from streamlit_google_auth import Authenticate
+    
+    auth_manager.setup_google_credentials()
+    redirect_uri = st.secrets.get("REDIRECT_URI", "http://localhost:8501")
+    
+    authenticator = Authenticate(
+        secret_credentials_path='google_credentials.json',
+        cookie_name='azscience_auth',
+        cookie_key='azscience_secret_key',
+        redirect_uri=redirect_uri,
+    )
+    
+    authenticator.check_authentification()
+    
+    if not st.session_state.get('connected'):
+        st.title("🔐 Hệ thống Phân tích Thống kê Nghiên cứu")
+        st.info("Vui lòng đăng nhập bằng tài khoản Google để tiếp tục sử dụng hệ thống.")
+        authenticator.login()
+        st.stop()
+        
+    # Nếu đã đăng nhập
+    user_email = st.session_state['user_info'].get('email')
+    user_name = st.session_state['user_info'].get('name')
+    if not auth_manager.can_use(user_email):
+        st.error(f"Tài khoản {user_email} đã hết lượt sử dụng miễn phí.")
+        st.warning("Vui lòng liên hệ Admin (ngviphuc@gmail.com) để gia hạn.")
+        if st.button("Đăng xuất"):
+            authenticator.logout()
+        st.stop()
+    
+    # Hiển thị thông tin user ở Sidebar
+    with st.sidebar:
+        st.markdown("### 👤 Tài khoản")
+        st.write(f"**{user_name}**")
+        limits = auth_manager.get_user_limits(user_email)
+        st.write(f"🔄 Lượt đã dùng: {limits['UsageCount']} / {limits['MaxLimit']}")
+        if st.button("Đăng xuất", key="logout_btn_sidebar"):
+            authenticator.logout()
+        st.markdown("---")
+except Exception as e:
+    st.error("Chưa cấu hình Google Cloud API Credentials trong thư mục/secrets.")
+    st.info(str(e))
+    st.stop()
+
 # Custom CSS cho giao diện Premium
 st.markdown("""
     <style>
@@ -1892,8 +1941,9 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
 
         st.write("")
         st.info(f"💡 **Lời khuyên nghiên cứu:** Với trình độ **{LEVEL_LABELS_AI[ai_level]['label']}**, ngoài việc tính toán {roadmap[0].lower() if roadmap else 'các tham số'}, bạn cần đặc biệt chú ý đến **{roadmap[2] if len(roadmap)>2 else 'các chỉ số'}** và sử dụng **{roadmap[3] if len(roadmap)>3 else 'biểu đồ'}** để minh họa trực quan kết quả, giúp tăng tính thuyết phục cho bài nghiên cứu.")
-                
         if st.button("📌 Xác nhận lộ trình này & Sang Bước 2", use_container_width=True, type="primary"):
+            user_email = st.session_state.get('user_info', {}).get('email')
+            if user_email: auth_manager.increment_usage(user_email)
             st.session_state.current_roadmap = roadmap
             st.session_state.ai_analysis_type = rec['label']
             st.session_state.academic_level = LEVEL_LABELS_AI[ai_level]['label']

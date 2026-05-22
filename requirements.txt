@@ -13,3 +13,6 @@ factor_analyzer
 networkx
 pydot
 PyPDF2
+streamlit-google-auth
+st-gsheets-connection
+gspread
