@@ -1051,22 +1051,56 @@ try:
     is_cloud = "GOOGLE_CREDENTIALS" in st.secrets
     hardcoded_uri = "https://baitoankinhte.streamlit.app/" if is_cloud else "http://localhost:8501/"
 
-    # Hàm đổi mã code lấy thông tin user, dùng cache để chống lỗi fetch 2 lần từ Streamlit Cloud
-    @st.cache_data(ttl=300, show_spinner=False)
+    # Hàm đổi mã code lấy thông tin user, dùng bộ nhớ tạm (File Cache) để đồng bộ giữa nhiều Process
     def exchange_code(auth_code, uri):
+        import os
+        import json
+        import time
+        import tempfile
         import google_auth_oauthlib.flow
         from googleapiclient.discovery import build
         
-        flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-            'google_credentials.json',
-            scopes=["openid", "https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"],
-            redirect_uri=uri,
-        )
-        flow.fetch_token(code=auth_code)
-        credentials = flow.credentials
+        # Thư mục tạm dùng chung cho tất cả process của Streamlit
+        cache_dir = os.path.join(tempfile.gettempdir(), "oauth_cache")
+        os.makedirs(cache_dir, exist_ok=True)
+        # Tên file cache dựa trên mã code (code này là độc nhất)
+        safe_code = "".join([c for c in auth_code if c.isalnum()]) # Xóa ký tự đặc biệt để làm tên file
+        cache_file = os.path.join(cache_dir, f"{safe_code}.json")
         
-        user_info_service = build(serviceName="oauth2", version="v2", credentials=credentials)
-        return dict(user_info_service.userinfo().get().execute())
+        # 1. Kiểm tra xem có Process nào khác đã lấy token và ghi ra file chưa
+        if os.path.exists(cache_file):
+            with open(cache_file, 'r') as f:
+                return json.load(f)
+                
+        # 2. Nếu chưa có, tiến hành gọi Google để đổi token
+        try:
+            flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
+                'google_credentials.json',
+                scopes=["openid", "https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"],
+                redirect_uri=uri,
+            )
+            flow.fetch_token(code=auth_code)
+            credentials = flow.credentials
+            
+            user_info_service = build(serviceName="oauth2", version="v2", credentials=credentials)
+            user_info = dict(user_info_service.userinfo().get().execute())
+            
+            # Ghi dữ liệu ra file để các Process khác đang chờ có thể đọc được
+            with open(cache_file, 'w') as f:
+                json.dump(user_info, f)
+            return user_info
+            
+        except Exception as e:
+            # 3. NẾU LỖI (invalid_grant): Rất có thể do một Process khác ĐÃ MANG CODE ĐI ĐỔI rồi,
+            # và Process này đang bị lỗi vì code đã "chết".
+            # Giải pháp: Chờ tối đa 3-5 giây để xem Process kia có ghi file cache không!
+            for _ in range(10):
+                time.sleep(0.5)
+                if os.path.exists(cache_file):
+                    with open(cache_file, 'r') as f:
+                        return json.load(f)
+            # Nếu chờ mỏi mắt không thấy file đâu, thì quăng lỗi thật
+            raise e
 
     if "connected" not in st.session_state:
         st.session_state["connected"] = False
