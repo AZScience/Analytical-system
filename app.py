@@ -1052,7 +1052,22 @@ try:
     if not st.session_state.get('connected'):
         st.title("🔐 Hệ thống Phân tích Thống kê Nghiên cứu")
         st.info("Vui lòng đăng nhập bằng tài khoản Google để tiếp tục sử dụng hệ thống.")
-        authenticator.login()
+        
+        # Sửa lỗi 403 trên Streamlit Cloud do bị bọc trong iframe: Thay target="_self" thành target="_top"
+        try:
+            auth_url = authenticator.get_authorization_url()
+            html_content = f"""
+            <div style="display: flex; justify-content: center; margin-top: 20px;">
+                <a href="{auth_url}" target="_top" style="background-color: #4285f4; color: #fff; text-decoration: none; text-align: center; font-size: 16px; margin: 4px 2px; cursor: pointer; padding: 8px 16px; border-radius: 4px; display: flex; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                    <img src="https://lh3.googleusercontent.com/COxitqgJr1sJnIDe8-jiKhxDx1FrYbtRHKJ9z_hELisAlapwE9LUPh6fcXIfb5vwpbMl4xl9H9TRFPc5NOO8Sb3VSgIBrfRYvW6cUA" alt="Google logo" style="margin-right: 12px; width: 24px; height: 24px; background-color: white; border: 2px solid white; border-radius: 50%;">
+                    Đăng nhập bằng Google
+                </a>
+            </div>
+            """
+            st.markdown(html_content, unsafe_allow_html=True)
+        except Exception as e:
+            st.error(f"Lỗi tạo link đăng nhập: {e}")
+            
         st.stop()
         
     # Nếu đã đăng nhập
