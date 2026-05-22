@@ -21,9 +21,6 @@ def setup_gsheets_credentials():
 
 def get_user_limits(email: str):
     """Lấy thông tin giới hạn của user từ Google Sheets."""
-    if email == "ngviphuc@gmail.com":
-        return {"Email": email, "UsageCount": 0, "MaxLimit": 9999}
-        
     try:
         conn = st.connection("gsheets", type=GSheetsConnection)
         df = conn.read(worksheet="Users", usecols=[0, 1, 2], ttl=0)
@@ -36,8 +33,9 @@ def get_user_limits(email: str):
     
     user_row = df[df["Email"] == email]
     if user_row.empty:
-        # Nếu là user mới, tặng 3 lượt
-        new_row = {"Email": email, "UsageCount": 0, "MaxLimit": 3}
+        # Nếu là admin, cho limit 9999, ngược lại 3
+        max_lim = 9999 if email == "ngviphuc@gmail.com" else 3
+        new_row = {"Email": email, "UsageCount": 0, "MaxLimit": max_lim}
         df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
         try:
             conn.update(worksheet="Users", data=df)
@@ -51,14 +49,11 @@ def get_user_limits(email: str):
         row_dict["MaxLimit"] = int(float(row_dict["MaxLimit"]))
     except Exception:
         row_dict["UsageCount"] = 0
-        row_dict["MaxLimit"] = 3
+        row_dict["MaxLimit"] = 9999 if email == "ngviphuc@gmail.com" else 3
     return row_dict
 
 def increment_usage(email: str):
     """Trừ đi 1 lượt sử dụng của user."""
-    if email == "ngviphuc@gmail.com":
-        return True # Admin không bị trừ
-        
     try:
         conn = st.connection("gsheets", type=GSheetsConnection)
         df = conn.read(worksheet="Users", ttl=0)
@@ -80,6 +75,18 @@ def increment_usage(email: str):
             st.error(f"Lỗi cập nhật số lượt dùng lên Google Sheets: {e}")
             return False
         return True
+    else:
+        # Nếu chưa tồn tại trong sheet (đặc biệt là admin)
+        max_lim = 9999 if email == "ngviphuc@gmail.com" else 3
+        new_row = {"Email": email, "UsageCount": 1, "MaxLimit": max_lim}
+        df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+        try:
+            conn.update(worksheet="Users", data=df)
+            return True
+        except Exception as e:
+            st.error(f"Lỗi cập nhật số lượt dùng lên Google Sheets: {e}")
+            return False
+            
     return False
 
 def can_use(email: str):
