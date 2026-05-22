@@ -1051,55 +1051,66 @@ try:
     is_cloud = "GOOGLE_CREDENTIALS" in st.secrets
     hardcoded_uri = "https://baitoankinhte.streamlit.app/" if is_cloud else "http://localhost:8501/"
 
-    # Hàm đổi mã code lấy thông tin user, dùng bộ nhớ tạm (File Cache) để đồng bộ giữa nhiều Process
+    # Hàm đổi mã code lấy thông tin user sử dụng trực tiếp thư viện requests để xem lỗi chi tiết từ Google
     def exchange_code(auth_code, uri):
         import os
         import json
         import time
         import tempfile
-        import google_auth_oauthlib.flow
-        from googleapiclient.discovery import build
+        import requests
         
-        # Thư mục tạm dùng chung cho tất cả process của Streamlit
         cache_dir = os.path.join(tempfile.gettempdir(), "oauth_cache")
         os.makedirs(cache_dir, exist_ok=True)
-        # Tên file cache dựa trên mã code (code này là độc nhất)
-        safe_code = "".join([c for c in auth_code if c.isalnum()]) # Xóa ký tự đặc biệt để làm tên file
+        safe_code = "".join([c for c in auth_code if c.isalnum()])
         cache_file = os.path.join(cache_dir, f"{safe_code}.json")
         
-        # 1. Kiểm tra xem có Process nào khác đã lấy token và ghi ra file chưa
         if os.path.exists(cache_file):
             with open(cache_file, 'r') as f:
                 return json.load(f)
                 
-        # 2. Nếu chưa có, tiến hành gọi Google để đổi token
         try:
-            flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-                'google_credentials.json',
-                scopes=["openid", "https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"],
-                redirect_uri=uri,
+            with open('google_credentials.json', 'r') as f:
+                creds = json.load(f)
+                if 'web' in creds:
+                    creds = creds['web']
+                    
+            token_url = "https://oauth2.googleapis.com/token"
+            data = {
+                'client_id': creds['client_id'],
+                'client_secret': creds['client_secret'],
+                'code': auth_code,
+                'grant_type': 'authorization_code',
+                'redirect_uri': uri
+            }
+            
+            # Đổi token
+            resp = requests.post(token_url, data=data)
+            if resp.status_code != 200:
+                raise Exception(f"Token API {resp.status_code}: {resp.text}")
+                
+            token_data = resp.json()
+            access_token = token_data['access_token']
+            
+            # Lấy thông tin user
+            user_resp = requests.get(
+                "https://www.googleapis.com/oauth2/v2/userinfo",
+                headers={"Authorization": f"Bearer {access_token}"}
             )
-            flow.fetch_token(code=auth_code)
-            credentials = flow.credentials
+            if user_resp.status_code != 200:
+                raise Exception(f"User API {user_resp.status_code}: {user_resp.text}")
+                
+            user_info = user_resp.json()
             
-            user_info_service = build(serviceName="oauth2", version="v2", credentials=credentials)
-            user_info = dict(user_info_service.userinfo().get().execute())
-            
-            # Ghi dữ liệu ra file để các Process khác đang chờ có thể đọc được
             with open(cache_file, 'w') as f:
                 json.dump(user_info, f)
             return user_info
             
         except Exception as e:
-            # 3. NẾU LỖI (invalid_grant): Rất có thể do một Process khác ĐÃ MANG CODE ĐI ĐỔI rồi,
-            # và Process này đang bị lỗi vì code đã "chết".
-            # Giải pháp: Chờ tối đa 3-5 giây để xem Process kia có ghi file cache không!
             for _ in range(10):
                 time.sleep(0.5)
                 if os.path.exists(cache_file):
                     with open(cache_file, 'r') as f:
                         return json.load(f)
-            # Nếu chờ mỏi mắt không thấy file đâu, thì quăng lỗi thật
             raise e
 
     if "connected" not in st.session_state:
@@ -1113,13 +1124,12 @@ try:
             st.session_state["connected"] = True
             st.session_state["user_info"] = user_info
             
-            # Xóa mã code trên URL để tránh chạy lại và load lại trang
             st.query_params.clear()
             st.rerun()
         except Exception as e:
-            st.error(f"Đã xảy ra lỗi khi xác thực với Google: {e}")
-            st.code(f"Debug: URI='{hardcoded_uri}', Code='{code[:10]}...', Error='{str(e)}'")
-            st.warning("Lỗi này do phiên đăng nhập đã quá hạn hoặc mã đã được sử dụng.")
+            st.error("Đã xảy ra lỗi khi xác thực với Google")
+            st.code(f"Debug: URI='{hardcoded_uri}'\nCode='{code[:10]}...'\nError: {str(e)}")
+            st.warning("Lỗi này do cấu hình Google Cloud không khớp hoặc mã đã được sử dụng.")
             if st.button("Tải lại trang sạch (Clear URL)"):
                 st.query_params.clear()
                 st.rerun()
