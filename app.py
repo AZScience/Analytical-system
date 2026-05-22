@@ -1390,6 +1390,7 @@ try:
                 try:
                     user_info = exchange_code(code, redirect_uri)
                     
+                    st.session_state.clear()
                     st.session_state["connected"] = True
                     st.session_state["user_info"] = user_info
                     
@@ -1461,8 +1462,7 @@ try:
             st.error(f"Tài khoản {user_email} đã hết lượt sử dụng miễn phí.")
             st.warning("Vui lòng liên hệ Admin (ngviphuc@gmail.com) để gia hạn.")
             if st.button("Đăng xuất"):
-                st.session_state['connected'] = False
-                st.session_state['user_info'] = None
+                st.session_state.clear()
                 st.query_params.clear()
                 st.rerun()
             st.stop()
@@ -1474,8 +1474,7 @@ try:
         limits = auth_manager.get_user_limits(user_email)
         st.write(f"🔄 Lượt đã dùng: {limits['UsageCount']} / {limits['MaxLimit']}")
         if st.button("Đăng xuất", key="logout_btn_sidebar"):
-            st.session_state['connected'] = False
-            st.session_state['user_info'] = None
+            st.session_state.clear()
             st.query_params.clear()
             st.rerun()
         st.markdown("---")
