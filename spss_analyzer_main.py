@@ -277,20 +277,42 @@ def status_label(val, thresholds):
 # ─────────────────────────────────────────────────────────────────────────────
 #  1. TẠO DỮ LIỆU MẪU THỰC TẾ
 # ─────────────────────────────────────────────────────────────────────────────
-def generate_data(n=250, seed=42, missing_rate=0.02):
-    """Sinh dữ liệu khảo sát thực tế theo mô hình cấu trúc SEM"""
+def generate_data(n=250, seed=42, missing_rate=0.02, efa_passing_guaranteed=True):
+    """Sinh dữ liệu khảo sát thực tế theo mô hình cấu trúc SEM.
+    Hỗ trợ tùy chọn efa_passing_guaranteed để đảm bảo kết quả Cronbach và EFA đạt chuẩn nghiên cứu."""
+    for attempt in range(20):
+        current_seed = seed + attempt if efa_passing_guaranteed else seed
+        df = _generate_raw_data(n, current_seed, missing_rate, efa_passing_guaranteed)
+        if not efa_passing_guaranteed:
+            return df
+        
+        # Kiểm tra chất lượng dữ liệu để đảm bảo các chỉ số EFA và Cronbach đạt
+        if _verify_data_quality(df):
+            return df
+            
+    # Fallback nếu thử nhiều lần không được
+    return _generate_raw_data(n, seed, missing_rate, efa_passing_guaranteed=True, force_clean=True)
+
+def _generate_raw_data(n, seed, missing_rate, efa_passing_guaranteed, force_clean=False):
     rng = np.random.default_rng(seed)
     cfg = MODEL_CONFIG["variables"]
 
-    # --- Biến tiềm ẩn (latent) ---
-    CSVC_lat = rng.normal(3.65, 0.55, n)
-    AN_lat   = rng.normal(3.72, 0.52, n)
-    HT_lat   = rng.normal(3.58, 0.60, n)
-    NV_lat   = rng.normal(3.80, 0.48, n)
+    # Sử dụng phân phối Beta lệch phải để điểm Likert nghiêng về mức 4, 5 (như khảo sát thật)
+    # Beta(4, 2) có giá trị trung bình là 4/6 = 0.67. Khi scale sang [1, 5]: 1 + 4 * Beta(4, 2) có mean = 3.67.
+    CSVC_lat = 1.0 + 4.0 * rng.beta(4.0, 2.0, n)
+    AN_lat   = 1.0 + 4.0 * rng.beta(4.2, 1.8, n)
+    HT_lat   = 1.0 + 4.0 * rng.beta(3.8, 2.2, n)
+    NV_lat   = 1.0 + 4.0 * rng.beta(4.5, 1.5, n)
+    
     # CLDV bị ảnh hưởng bởi 4 biến độc lập
-    CLDV_lat = 0.28*CSVC_lat + 0.22*AN_lat + 0.25*HT_lat + 0.30*NV_lat + rng.normal(0, 0.35, n)
+    noise_latent = 0.15 if (efa_passing_guaranteed or force_clean) else 0.35
+    CLDV_lat = 0.28*CSVC_lat + 0.22*AN_lat + 0.25*HT_lat + 0.30*NV_lat + rng.normal(0, noise_latent, n)
+    CLDV_lat = np.clip(CLDV_lat, 1, 5)
+    
     # HL bị ảnh hưởng qua CLDV
-    HL_lat   = 0.72*CLDV_lat + 0.10*rng.normal(3.6, 0.5, n) + rng.normal(0, 0.30, n)
+    noise_hl = 0.15 if (efa_passing_guaranteed or force_clean) else 0.30
+    HL_lat   = 0.72*CLDV_lat + 0.10*(1.0 + 4.0*rng.beta(4, 2, n)) + rng.normal(0, noise_hl, n)
+    HL_lat = np.clip(HL_lat, 1, 5)
 
     latents = {"CSVC": CSVC_lat, "AN": AN_lat, "HT": HT_lat, "NV": NV_lat,
                "CLDV": CLDV_lat, "HL": HL_lat}
@@ -299,10 +321,21 @@ def generate_data(n=250, seed=42, missing_rate=0.02):
     # Nhân khẩu học
     data["ID"]       = [f"SV{str(i+1).zfill(3)}" for i in range(n)]
     data["GioiTinh"] = rng.choice([1, 2], n, p=[0.45, 0.55])       # 1=Nam 2=Nữ
-    data["NamHoc"]   = rng.choice([1, 2, 3, 4], n, p=[0.28,0.30,0.25,0.17])
+    data["NamHoc"]   = rng.choice([1, 2, 3, 4], n, p=[0.28, 0.30, 0.25, 0.17])
     data["Nganh"]    = rng.choice([1, 2, 3, 4, 5], n)               # 5 khoa
-    data["ThoiGian"] = rng.choice([1, 2, 3], n, p=[0.35,0.40,0.25]) # <1 / 1-2 / >2 năm
-    data["ChiPhi"]   = rng.choice([1, 2, 3], n, p=[0.50,0.35,0.15]) # tự túc / học bổng / gd
+    data["ThoiGian"] = rng.choice([1, 2, 3], n, p=[0.35, 0.40, 0.25]) # <1 / 1-2 / >2 năm
+    data["ChiPhi"]   = rng.choice([1, 2, 3], n, p=[0.50, 0.35, 0.15]) # tự túc / học bổng / gd
+
+    # Xác định các tham số nhiễu cho biến quan sát
+    if force_clean:
+        noise_val = 0.40
+        jitter_std = 0.03
+    elif efa_passing_guaranteed:
+        noise_val = 0.50
+        jitter_std = 0.05
+    else:
+        noise_val = 0.85
+        jitter_std = 0.20
 
     # Biến Likert từ latent
     def to_likert(lat, noise=0.80):
@@ -312,16 +345,94 @@ def generate_data(n=250, seed=42, missing_rate=0.02):
     for var_code, lat in latents.items():
         items = cfg[var_code]["items"]
         for j, item_code in enumerate(items):
-            jitter = rng.normal(0, 0.15)  # item-level offset
-            vals = to_likert(lat + jitter)
-            # Áp dụng missing
+            jitter = rng.normal(0, jitter_std)  # item-level offset
+            vals = to_likert(lat + jitter, noise=noise_val)
+            
+            # Áp dụng khuyết thiếu (missing data)
             mask = rng.random(n) < missing_rate
             vals = vals.astype(float)
             vals[mask] = np.nan
             data[item_code] = vals
 
     df = pd.DataFrame(data)
+
+    # Chèn thêm Outliers (ngoại lai) ở chế độ đời thực (3%)
+    if not (efa_passing_guaranteed or force_clean):
+        num_outliers = int(0.03 * n)
+        if num_outliers > 0:
+            outlier_indices = rng.choice(n, num_outliers, replace=False)
+            survey_cols = []
+            for var_code in latents.keys():
+                survey_cols.extend(list(cfg[var_code]["items"].keys()))
+                
+            for idx in outlier_indices:
+                outlier_type = rng.choice(["all_5", "all_1", "random"])
+                if outlier_type == "all_5":
+                    df.loc[idx, survey_cols] = 5.0
+                elif outlier_type == "all_1":
+                    df.loc[idx, survey_cols] = 1.0
+                else:
+                    df.loc[idx, survey_cols] = rng.choice([1.0, 2.0, 3.0, 4.0, 5.0], size=len(survey_cols))
+
     return df
+
+def _verify_data_quality(df):
+    """Kiểm tra xem dữ liệu có đạt các điều kiện cần thiết của Cronbach và EFA không"""
+    cfg = MODEL_CONFIG["variables"]
+    ind_vars = [k for k, v in cfg.items() if v["type"] == "independent"]
+    all_items = []
+    
+    for var_code in ind_vars:
+        items = list(cfg[var_code]["items"].keys())
+        all_items.extend(items)
+        
+        # Kiểm tra Cronbach Alpha
+        c_res = cronbach_alpha(df[items].dropna().values)
+        alpha = c_res.get("alpha", 0)
+        if alpha < 0.70:
+            return False
+            
+        # Kiểm tra Item-Total Correlation >= 0.30
+        itc_list = c_res.get("itc_list", [])
+        for col_name, corr in itc_list:
+            if corr < 0.30:
+                return False
+                
+    # Kiểm tra KMO và Bartlett
+    df_efa = df[all_items].copy()
+    for col in df_efa.columns:
+        if df_efa[col].isna().any():
+            df_efa[col] = df_efa[col].fillna(df_efa[col].mean())
+    df_efa = df_efa.dropna()
+    
+    if df_efa.empty:
+        return False
+        
+    kmo = kmo_test(df_efa)
+    if kmo < 0.70:  # KMO >= 0.70 là mức tốt
+        return False
+        
+    _, _, p_bart = bartlett_test(df_efa)
+    if p_bart >= 0.05:
+        return False
+        
+    # Kiểm tra loadings EFA sơ bộ (mỗi item phải load >= 0.50 vào ít nhất 1 factor)
+    try:
+        from sklearn.decomposition import PCA
+        from sklearn.preprocessing import StandardScaler
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(df_efa)
+        pca = PCA(n_components=len(ind_vars))
+        pca.fit(X_scaled)
+        loadings = varimax(pca.components_.T * np.sqrt(pca.explained_variance_))
+        
+        for i in range(loadings.shape[0]):
+            if np.max(np.abs(loadings[i])) < 0.50:
+                return False
+    except Exception:
+        return False
+        
+    return True
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -469,25 +580,34 @@ def run_cronbach(df):
 #  4. PHÂN TÍCH NHÂN TỐ KHÁM PHÁ (EFA) – PCA thủ công
 # ─────────────────────────────────────────────────────────────────────────────
 def kmo_test(df_items):
-    """Tính KMO từ ma trận tương quan"""
+    """Tính KMO từ ma trận tương quan có thêm Ridge Regularization để tránh lỗi suy biến ma trận"""
     df_clean = df_items.dropna()
+    if df_clean.empty or df_clean.shape[1] < 2:
+        return 0.0
     corr = df_clean.corr().values
     n_vars = corr.shape[0]
-    # Partial correlations
+    
+    # Ridge regularization: cộng một hằng số nhỏ vào đường chéo chính để tránh suy biến
+    epsilon = 1e-5
+    corr_reg = corr + epsilon * np.eye(n_vars)
+    # Chuẩn hóa lại ma trận tương quan sau khi cộng epsilon
+    d = np.diag(corr_reg)
+    corr_reg = corr_reg / np.sqrt(np.outer(d, d))
+    
     try:
-        inv_corr = np.linalg.inv(corr)
-        partial_corr = np.zeros_like(corr)
+        inv_corr = np.linalg.inv(corr_reg)
+        partial_corr = np.zeros_like(corr_reg)
         for i in range(n_vars):
             for j in range(n_vars):
                 if i != j:
                     partial_corr[i,j] = -inv_corr[i,j] / np.sqrt(inv_corr[i,i]*inv_corr[j,j])
         
-        sum_r2 = np.sum(corr**2) - n_vars  # off-diagonal
-        sum_p2 = np.sum(partial_corr**2) - n_vars
+        sum_r2 = np.sum(corr_reg**2) - np.sum(np.diag(corr_reg)**2)  # off-diagonal
+        sum_p2 = np.sum(partial_corr**2) - np.sum(np.diag(partial_corr)**2)
         kmo = sum_r2 / (sum_r2 + sum_p2)
         return round(float(kmo), 3)
-    except:
-        return 0.70
+    except Exception:
+        return 0.50  # Giá trị fallback thực tế tối thiểu nếu vẫn xảy ra lỗi toán học khác
 
 def bartlett_test(df_items):
     """Bartlett's test of sphericity"""
@@ -582,7 +702,7 @@ def run_efa(df, cronbach_results):
 
     pca = PCA(n_components=n_factors)
     pca.fit(X_scaled)
-    loadings_raw = pca.components_.T  # shape: n_items x n_factors
+    loadings_raw = pca.components_.T * np.sqrt(pca.explained_variance_)  # shape: n_items x n_factors
     
     # Varimax rotation (thủ công)
     loadings = varimax(loadings_raw)

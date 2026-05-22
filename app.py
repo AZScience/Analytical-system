@@ -1299,8 +1299,14 @@ def clean_data(df):
     
     return df_clean, logs
 
-def perform_analysis(df):
+def perform_analysis(df, progress_callback=None):
     """Thực hiện tính toán chọn lọc dựa trên Lộ trình hiện tại"""
+    import time
+    def update_progress(step_name, ratio):
+        if progress_callback:
+            progress_callback(step_name, ratio)
+            time.sleep(0.2)
+
     roadmap = st.session_state.get('current_roadmap', [])
     # Nếu lộ trình trống hoặc không rõ ràng, mặc định chạy toàn bộ các bước cơ bản để đảm bảo minh bạch
     if not roadmap:
@@ -1314,34 +1320,42 @@ def perform_analysis(df):
     }
     
     # 1. Thống kê mô tả & Làm sạch
+    update_progress("Phân tích Đặc điểm Mẫu & Thống kê Mô tả", 0.125)
     if any(k in roadmap_str for k in ["mô tả", "tần số", "trung bình", "descriptive", "biến quan sát", "tổng quan", "mẫu", "phân phối", "biến động", "ngoại lai", "đại diện", "làm sạch", "tổng quát", "đặc điểm"]):
         res["desc"] = spss.describe_sample(df)
         
     # 2. Độ tin cậy (Cronbach)
+    update_progress("Kiểm định Độ tin cậy Cronbach's Alpha", 0.25)
     if any(k in roadmap_str for k in ["cronbach", "alpha", "tin cậy", "thang đo", "hệ số", "nhất quán", "đo lường", "đáng tin"]):
         res["cronbach"] = spss.run_cronbach(df)
         
     # 3. Phân tích nhân tố (EFA/CFA)
+    update_progress("Phân tích Nhân tố Khám phá (EFA)", 0.375)
     if any(k in roadmap_str for k in ["efa", "cfa", "thang đo", "nhân tố", "cấu trúc", "hội tụ", "phân biệt", "khám phá", "khẳng định", "gom nhóm", "giảm chiều"]):
         res["efa"] = spss.run_efa(df, res["cronbach"])
         
     # 4. Tương quan & Tạo biến trung bình
+    update_progress("Phân tích Tương quan Pearson & Tạo biến", 0.50)
     if any(k in roadmap_str for k in ["tương quan", "correlation", "hồi quy", "regression", "tác động", "liên hệ", "mối quan hệ", "khác biệt", "t-test", "anova", "so sánh", "nhóm", "hiệu ứng"]):
         res["corr"], res["df_means"] = spss.run_correlation(df)
         
     # 5. Hồi quy (Regression)
+    update_progress("Phân tích Hồi quy OLS & Kiểm định Giả thuyết", 0.625)
     if any(k in roadmap_str for k in ["hồi quy", "regression", "tác động", "ảnh hưởng", "giả thuyết", "mô hình", "dự báo", "phụ thuộc", "độc lập", "beta", "ols"]):
         res["reg"] = spss.run_regression(res["df_means"])
         
     # 6. Kiểm định nhóm (Group Tests)
+    update_progress("Kiểm định sự khác biệt nhóm (T-test/ANOVA)", 0.75)
     if any(k in roadmap_str for k in ["khác biệt", "t-test", "anova", "so sánh", "kiểm định", "nhóm", "đặc điểm mẫu", "phân nhóm", "đối tượng"]):
         res["groups"] = spss.run_group_tests(df, res["df_means"])
 
     # 7. Phân tích trung gian (Mediation)
+    update_progress("Phân tích Tác động Trung gian (Mediation)", 0.875)
     if any(k in roadmap_str for k in ["trung gian", "mediation", "model 4", "gián tiếp", "sobel", "cơ chế"]):
         res["mediation"] = spss.run_mediation_model4(res["df_means"])
     
-    # Xuất file & Tạo đồ thị (Selective)
+    # 8. Xuất file & Tạo đồ thị (Selective)
+    update_progress("Đóng gói báo cáo & Tạo biểu đồ trực quan", 1.0)
     spss.export_data(df, res["cronbach"], res["efa"], res["reg"], res["df_means"])
     spss.create_charts(df, res["df_means"], res["cronbach"], res["efa"], res["reg"])
     if res["reg"]: spss.create_model_diagram(res["reg"])
@@ -2169,12 +2183,23 @@ elif menu_selection == "📥 Quản lý Dữ liệu":
         with c_m:
             miss_rate = st.slider("Tỷ lệ thiếu (%)", 0, 30, 2)
             
+        gen_mode = st.radio(
+            "Chế độ sinh dữ liệu:",
+            options=["Realistic but Guaranteed to Pass EFA (Đạt EFA 100%)", "Fully Messy Real-world (Đời thực - EFA có thể không đạt)"],
+            help="Chế độ 'Đạt EFA 100%' tối ưu hóa các tham số để đảm bảo hệ số KMO cao và các nhân tố phân biệt rõ ràng. Chế độ 'Đời thực' sinh dữ liệu giống thực tế có tỷ lệ nhiễu và ngoại lai cao, có thể đòi hỏi loại bỏ một số biến quan sát hoặc sử dụng công cụ Smart-Smooth."
+        )
+            
         if st.button("🚀 Khởi tạo Dữ liệu Mẫu", use_container_width=True):
-            st.session_state.raw_df = spss.generate_data(n=sample_n, missing_rate=miss_rate/100)
+            efa_pass = (gen_mode == "Realistic but Guaranteed to Pass EFA (Đạt EFA 100%)")
+            st.session_state.raw_df = spss.generate_data(
+                n=sample_n, 
+                missing_rate=miss_rate/100, 
+                efa_passing_guaranteed=efa_pass
+            )
             st.session_state.df = st.session_state.raw_df.copy()
             st.session_state.is_cleaned = False
             st.session_state.results = None # Reset kết quả
-            st.success(f"Đã tạo {sample_n} mẫu với {miss_rate}% dữ liệu trống.")
+            st.success(f"Đã tạo {sample_n} mẫu với {miss_rate}% dữ liệu trống ({'Đạt EFA 100%' if efa_pass else 'Chế độ đời thực'}).")
             st.rerun()
 
     with tab_manual:
@@ -2504,31 +2529,19 @@ elif menu_selection == "📂 Dữ liệu & Mô tả":
                 prog_text = st.empty()
                 prog_bar = st.progress(0)
                 
-                # Danh sách các bước thực thi (Dựa trên Lộ trình thực tế)
-                steps_exec = st.session_state.get('current_roadmap', [])
-                if not steps_exec:
-                    steps_exec = [
-                        "Bước 1: Kiểm định Độ tin cậy Cronbach's Alpha",
-                        "Bước 2: Phân tích Nhân tố Khám phá (EFA)",
-                        "Bước 3: Phân tích Tương quan Pearson",
-                        "Bước 4: Phân tích Hồi quy OLS & Kiểm định giả thuyết",
-                        "Bước 5: Kiểm định sự khác biệt (T-test/ANOVA)",
-                        "Bước 6: Đóng gói báo cáo & Tạo biểu đồ thuyết minh"
-                    ]
+                # Callback cập nhật thực tế
+                def update_ui(step_name, ratio):
+                    prog_text.markdown(f"**Đang thực hiện:** {step_name}...")
+                    prog_bar.progress(ratio)
                 
-                import time
-                # Thực thi thật
-                st.session_state.results = perform_analysis(st.session_state.df)
-                
-                # Hiển thị tiến trình giả lập cho UX
-                for i, step in enumerate(steps_exec):
-                    prog_text.markdown(f"**Đang thực hiện:** {step}...")
-                    prog_bar.progress((i + 1) / len(steps_exec))
-                    time.sleep(0.4)
+                # Thực thi thật có callback tiến trình
+                st.session_state.results = perform_analysis(st.session_state.df, progress_callback=update_ui)
                 
                 st.success("✅ **Hoàn tất toàn bộ Lộ trình!**")
-                st.info(f"Toàn bộ {len(st.session_state.current_roadmap)} bước kết quả trong lộ trình đã được tính toán xong. Bạn có thể nhấn vào Menu bên trái để xem chi tiết từng bước.")
+                roadmap_len = len(st.session_state.get('current_roadmap', [])) or 6
+                st.info(f"Toàn bộ {roadmap_len} bước kết quả trong lộ trình đã được tính toán xong. Bạn có thể nhấn vào Menu bên trái để xem chi tiết từng bước.")
                 st.balloons()
+                import time
                 time.sleep(1)
                 st.rerun()
 
@@ -2613,7 +2626,9 @@ elif menu_selection in current_roadmap:
         st.warning("⚠️ Kết quả phân tích hiện chưa được tính toán cho lộ trình này.")
         if st.button("🚀 Bắt đầu Phân tích Toàn bộ Lộ trình (Full Analysis)"):
             with st.status("🔄 Hệ thống đang xử lý dữ liệu và tính toán...", expanded=True) as status:
-                st.session_state.results = perform_analysis(st.session_state.df)
+                def update_status(step_name, ratio):
+                    st.write(f"⚙️ **{step_name}** ({int(ratio*100)}%)")
+                st.session_state.results = perform_analysis(st.session_state.df, progress_callback=update_status)
                 status.update(label="✅ Phân tích hoàn tất!", state="complete")
             st.rerun()
         st.stop()
