@@ -1047,29 +1047,32 @@ try:
         redirect_uri=redirect_uri,
     )
     
+    # Hàm đổi mã code lấy thông tin user, dùng cache để chống lỗi fetch 2 lần từ Streamlit Cloud
+    @st.cache_data(ttl=300, show_spinner=False)
+    def exchange_code(auth_code, uri):
+        import google_auth_oauthlib.flow
+        from googleapiclient.discovery import build
+        
+        flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
+            'google_credentials.json',
+            scopes=["openid", "https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"],
+            redirect_uri=uri,
+        )
+        flow.fetch_token(code=auth_code)
+        credentials = flow.credentials
+        
+        user_info_service = build(serviceName="oauth2", version="v2", credentials=credentials)
+        return dict(user_info_service.userinfo().get().execute())
+
     # Thay thế authenticator.check_authentification() bằng mã tự viết để gỡ lỗi và chống vòng lặp
     if "connected" not in st.session_state:
         st.session_state["connected"] = False
-    if "processing_code" not in st.session_state:
-        st.session_state["processing_code"] = False
 
     code = st.query_params.get("code")
-    if code and not st.session_state.get("connected") and not st.session_state.get("processing_code"):
-        st.session_state["processing_code"] = True
+    if code and not st.session_state.get("connected"):
         try:
-            import google_auth_oauthlib.flow
-            from googleapiclient.discovery import build
-            
-            flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-                'google_credentials.json',
-                scopes=["openid", "https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"],
-                redirect_uri=redirect_uri,
-            )
-            flow.fetch_token(code=code)
-            credentials = flow.credentials
-            
-            user_info_service = build(serviceName="oauth2", version="v2", credentials=credentials)
-            user_info = user_info_service.userinfo().get().execute()
+            # Dùng cache để giải quyết triệt để lỗi Race Condition / Service Worker trên Streamlit Cloud
+            user_info = exchange_code(code, redirect_uri)
             
             st.session_state["connected"] = True
             st.session_state["user_info"] = user_info
@@ -1078,9 +1081,8 @@ try:
             st.query_params.clear()
             st.rerun()
         except Exception as e:
-            st.session_state["processing_code"] = False
             st.error(f"Đã xảy ra lỗi khi xác thực với Google: {e}")
-            st.warning("Lỗi này thường do trình duyệt tải trang 2 lần cùng lúc hoặc tải lại trang chứa mã code cũ.")
+            st.warning("Lỗi này do phiên đăng nhập đã quá hạn hoặc mã đã được sử dụng.")
             if st.button("Tải lại trang sạch (Clear URL)"):
                 st.query_params.clear()
                 st.rerun()
