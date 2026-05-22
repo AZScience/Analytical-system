@@ -1038,20 +1038,11 @@ try:
     from streamlit_google_auth import Authenticate
     
     auth_manager.setup_google_credentials()
-    redirect_uri = st.secrets.get("REDIRECT_URI", "http://localhost:8501")
     
-    authenticator = Authenticate(
-        secret_credentials_path='google_credentials.json',
-        cookie_name='azscience_auth',
-        cookie_key='azscience_secret_key',
-        redirect_uri=redirect_uri,
-    )
-    
-    # Lấy Redirect URI từ cấu hình (bắt buộc phải khớp với Google Console và đường dẫn thực tế của app)
-    # Không hardcode cứng để tránh trường hợp bạn đổi tên app trên Streamlit Cloud
+    # Lấy Redirect URI từ Secrets, nếu không có thì mặc định là localhost
     redirect_uri = st.secrets.get("REDIRECT_URI", "http://localhost:8501/")
 
-    # Hàm đổi mã code lấy thông tin user sử dụng trực tiếp thư viện requests để xem lỗi chi tiết từ Google
+    # Hàm đổi mã code lấy thông tin user
     def exchange_code(auth_code, uri):
         import os
         import json
@@ -1083,7 +1074,6 @@ try:
                 'redirect_uri': uri
             }
             
-            # Đổi token
             resp = requests.post(token_url, data=data)
             if resp.status_code != 200:
                 raise Exception(f"Token API {resp.status_code}: {resp.text}")
@@ -1091,7 +1081,6 @@ try:
             token_data = resp.json()
             access_token = token_data['access_token']
             
-            # Lấy thông tin user
             user_resp = requests.get(
                 "https://www.googleapis.com/oauth2/v2/userinfo",
                 headers={"Authorization": f"Bearer {access_token}"}
@@ -1129,7 +1118,7 @@ try:
         except Exception as e:
             st.error("Đã xảy ra lỗi khi xác thực với Google")
             st.code(f"Debug: URI='{redirect_uri}'\nCode='{code[:10]}...'\nError: {str(e)}")
-            st.warning("Lỗi này do cấu hình Google Cloud không khớp hoặc mã đã được sử dụng.")
+            st.warning("Gợi ý: Hãy xóa mã ?code=... trên thanh địa chỉ hoặc bấm nút bên dưới để thử lại.")
             if st.button("Tải lại trang sạch (Clear URL)"):
                 st.query_params.clear()
                 st.rerun()
@@ -1144,7 +1133,7 @@ try:
             flow_btn = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
                 'google_credentials.json',
                 scopes=["openid", "https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"],
-                redirect_uri=hardcoded_uri,
+                redirect_uri=redirect_uri,
             )
             auth_url, _ = flow_btn.authorization_url(access_type="offline", include_granted_scopes="true")
             
@@ -1169,7 +1158,10 @@ try:
         st.error(f"Tài khoản {user_email} đã hết lượt sử dụng miễn phí.")
         st.warning("Vui lòng liên hệ Admin (ngviphuc@gmail.com) để gia hạn.")
         if st.button("Đăng xuất"):
-            authenticator.logout()
+            st.session_state['connected'] = False
+            st.session_state['user_info'] = None
+            st.query_params.clear()
+            st.rerun()
         st.stop()
     
     # Hiển thị thông tin user ở Sidebar
@@ -1179,7 +1171,10 @@ try:
         limits = auth_manager.get_user_limits(user_email)
         st.write(f"🔄 Lượt đã dùng: {limits['UsageCount']} / {limits['MaxLimit']}")
         if st.button("Đăng xuất", key="logout_btn_sidebar"):
-            authenticator.logout()
+            st.session_state['connected'] = False
+            st.session_state['user_info'] = None
+            st.query_params.clear()
+            st.rerun()
         st.markdown("---")
 except Exception as e:
     st.error("Chưa cấu hình Google Cloud API Credentials trong thư mục/secrets.")
