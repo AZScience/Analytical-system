@@ -1389,62 +1389,79 @@ try:
             with st.spinner("Đang kết nối với Google..."):
                 try:
                     user_info = exchange_code(code, redirect_uri)
+                    user_email = user_info.get("email")
+                    
+                    if user_email:
+                        # Kiểm tra giới hạn lượt dùng trước khi cho đăng nhập
+                        limits = auth_manager.get_user_limits(user_email)
+                        if int(limits["UsageCount"]) >= int(limits["MaxLimit"]) and user_email != "ngviphuc@gmail.com":
+                            st.session_state["login_error"] = f"Tài khoản {user_email} đã hết lượt sử dụng miễn phí. Vui lòng liên hệ Admin (ngviphuc@gmail.com) để gia hạn."
+                            st.query_params.clear()
+                            st.rerun()
+                        
+                        # Tăng số lượt đăng nhập lên Google Sheets
+                        auth_manager.increment_usage(user_email)
                     
                     st.session_state.clear()
                     st.session_state["connected"] = True
                     st.session_state["user_info"] = user_info
+                    st.session_state["session_authorized"] = True
                     
                     st.query_params.clear()
                     st.rerun()
                 except Exception as e:
-                    st.error("Đã xảy ra lỗi khi trao đổi mã xác thực với Google.")
-                    st.code(f"Debug: URI='{redirect_uri}'\nCode='{code[:10]}...'\nError: {str(e)}")
-                    st.warning("Gợi ý: Mã đăng nhập này có thể đã được sử dụng bởi một tiến trình mạng khác. Vui lòng thử đăng nhập lại.")
-                    if st.button("Tải lại trang sạch"):
-                        st.query_params.clear()
-                        st.rerun()
+                    st.session_state["login_error"] = f"Đã xảy ra lỗi khi trao đổi mã xác thực với Google: {str(e)}"
+                    st.query_params.clear()
+                    st.rerun()
         st.stop()
             
     if not st.session_state.get('connected'):
         st.title("🔐 Hệ thống Phân tích Thống kê Nghiên cứu")
-        st.info("Vui lòng đăng nhập bằng tài khoản Google để tiếp tục sử dụng hệ thống.")
         
-        try:
-            import google_auth_oauthlib.flow
-            import os
-            import tempfile
+        if "login_error" in st.session_state:
+            st.error(st.session_state["login_error"])
+            if st.button("Thử lại / Quay lại màn hình đăng nhập"):
+                del st.session_state["login_error"]
+                st.rerun()
+        else:
+            st.info("Vui lòng đăng nhập bằng tài khoản Google để tiếp tục sử dụng hệ thống.")
             
-            flow_btn = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-                'google_credentials.json',
-                scopes=["openid", "https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"],
-                redirect_uri=redirect_uri,
-            )
-            
-            # Ép buộc dùng PKCE (Google bắt buộc với một số Client Type)
-            auth_url, state = flow_btn.authorization_url(
-                access_type="offline", 
-                include_granted_scopes="true",
-                code_challenge_method="S256"
-            )
-            
-            # Lưu code_verifier vào file tạm theo state để dùng khi callback
-            if hasattr(flow_btn, "code_verifier") and flow_btn.code_verifier:
-                cache_dir = os.path.join(tempfile.gettempdir(), "oauth_cache")
-                os.makedirs(cache_dir, exist_ok=True)
-                with open(os.path.join(cache_dir, f"state_{state}.txt"), "w") as f:
-                    f.write(flow_btn.code_verifier)
-            
-            html_content = f"""
-            <div style="display: flex; justify-content: center; margin-top: 20px;">
-                <a href="{auth_url}" target="_blank" style="background-color: #4285f4; color: #fff; text-decoration: none; text-align: center; font-size: 16px; margin: 4px 2px; cursor: pointer; padding: 8px 16px; border-radius: 4px; display: flex; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                    <img src="https://lh3.googleusercontent.com/COxitqgJr1sJnIDe8-jiKhxDx1FrYbtRHKJ9z_hELisAlapwE9LUPh6fcXIfb5vwpbMl4xl9H9TRFPc5NOO8Sb3VSgIBrfRYvW6cUA" alt="Google logo" style="margin-right: 12px; width: 24px; height: 24px; background-color: white; border: 2px solid white; border-radius: 50%;">
-                    Đăng nhập bằng Google
-                </a>
-            </div>
-            """
-            st.markdown(html_content, unsafe_allow_html=True)
-        except Exception as e:
-            st.error(f"Lỗi tạo link đăng nhập: {e}")
+            try:
+                import google_auth_oauthlib.flow
+                import os
+                import tempfile
+                
+                flow_btn = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
+                    'google_credentials.json',
+                    scopes=["openid", "https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"],
+                    redirect_uri=redirect_uri,
+                )
+                
+                # Ép buộc dùng PKCE (Google bắt buộc với một số Client Type)
+                auth_url, state = flow_btn.authorization_url(
+                    access_type="offline", 
+                    include_granted_scopes="true",
+                    code_challenge_method="S256"
+                )
+                
+                # Lưu code_verifier vào file tạm theo state để dùng khi callback
+                if hasattr(flow_btn, "code_verifier") and flow_btn.code_verifier:
+                    cache_dir = os.path.join(tempfile.gettempdir(), "oauth_cache")
+                    os.makedirs(cache_dir, exist_ok=True)
+                    with open(os.path.join(cache_dir, f"state_{state}.txt"), "w") as f:
+                        f.write(flow_btn.code_verifier)
+                
+                html_content = f"""
+                <div style="display: flex; justify-content: center; margin-top: 20px;">
+                    <a href="{auth_url}" target="_blank" style="background-color: #4285f4; color: #fff; text-decoration: none; text-align: center; font-size: 16px; margin: 4px 2px; cursor: pointer; padding: 8px 16px; border-radius: 4px; display: flex; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                        <img src="https://lh3.googleusercontent.com/COxitqgJr1sJnIDe8-jiKhxDx1FrYbtRHKJ9z_hELisAlapwE9LUPh6fcXIfb5vwpbMl4xl9H9TRFPc5NOO8Sb3VSgIBrfRYvW6cUA" alt="Google logo" style="margin-right: 12px; width: 24px; height: 24px; background-color: white; border: 2px solid white; border-radius: 50%;">
+                        Đăng nhập bằng Google
+                    </a>
+                </div>
+                """
+                st.markdown(html_content, unsafe_allow_html=True)
+            except Exception as e:
+                st.error(f"Lỗi tạo link đăng nhập: {e}")
             
         st.stop()
         
@@ -1454,6 +1471,7 @@ try:
     if not auth_manager.can_use(user_email):
         # Cho phép tiếp tục nếu họ đã có phân tích hoạt động hoặc đang chạy lộ trình trong session hiện tại
         has_active_session = (
+            st.session_state.get('session_authorized', False) or
             bool(st.session_state.get('current_roadmap')) or
             st.session_state.get('current_rec') is not None or
             st.session_state.get('essay_analysis_results') is not None
@@ -2178,9 +2196,6 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
             if not ai_prompt:
                 st.warning("Vui lòng nhập mô tả để AI bắt đầu phân tích.")
             else:
-                user_email = st.session_state.get('user_info', {}).get('email')
-                if run_ai and user_email: 
-                    auth_manager.increment_usage(user_email)
                 rec = recognize_problem_ai(ai_prompt)
                 st.session_state.current_rec = rec
                 st.session_state.essay_analysis_results = None
@@ -2208,7 +2223,6 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
         if run_ai:
             if uploaded_essay is not None:
                 user_email = st.session_state.get('user_info', {}).get('email')
-                if user_email: auth_manager.increment_usage(user_email)
                 with st.spinner("🔍 Đang đọc và phân tích nội dung file..."):
                     file_content = extract_text_from_file_ai(uploaded_essay)
                     if file_content == "ERROR_MISSING_DOCX":
@@ -2255,8 +2269,6 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
             if not topic_name:
                 st.warning("Vui lòng nhập tên đề tài.")
             else:
-                user_email = st.session_state.get('user_info', {}).get('email')
-                if user_email: auth_manager.increment_usage(user_email)
                 st.session_state.ai_prompt_val = topic_name
                 st.session_state.manual_topic = topic_name
                 st.session_state.manual_desc = problem_desc
