@@ -6,10 +6,14 @@ import os
 
 def setup_google_credentials():
     """Tạo file google_credentials.json từ st.secrets nếu đang chạy trên Cloud."""
-    if not os.path.exists('google_credentials.json'):
-        if "GOOGLE_CREDENTIALS" in st.secrets:
-            with open('google_credentials.json', 'w') as f:
-                json.dump(dict(st.secrets["GOOGLE_CREDENTIALS"]), f)
+    if "GOOGLE_CREDENTIALS" in st.secrets:
+        creds = st.secrets["GOOGLE_CREDENTIALS"]
+        if hasattr(creds, "to_dict"):
+            creds_dict = creds.to_dict()
+        else:
+            creds_dict = dict(creds)
+        with open('google_credentials.json', 'w') as f:
+            json.dump(creds_dict, f, default=dict)
                 
 def setup_gsheets_credentials():
     """Đảm bảo thiết lập cấu hình gsheets"""
