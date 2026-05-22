@@ -1047,6 +1047,10 @@ try:
         redirect_uri=redirect_uri,
     )
     
+    # Xác định chắc chắn môi trường để chốt Redirect URI
+    is_cloud = "GOOGLE_CREDENTIALS" in st.secrets
+    hardcoded_uri = "https://baitoankinhte.streamlit.app/" if is_cloud else "http://localhost:8501/"
+
     # Hàm đổi mã code lấy thông tin user, dùng cache để chống lỗi fetch 2 lần từ Streamlit Cloud
     @st.cache_data(ttl=300, show_spinner=False)
     def exchange_code(auth_code, uri):
@@ -1064,15 +1068,13 @@ try:
         user_info_service = build(serviceName="oauth2", version="v2", credentials=credentials)
         return dict(user_info_service.userinfo().get().execute())
 
-    # Thay thế authenticator.check_authentification() bằng mã tự viết để gỡ lỗi và chống vòng lặp
     if "connected" not in st.session_state:
         st.session_state["connected"] = False
 
     code = st.query_params.get("code")
     if code and not st.session_state.get("connected"):
         try:
-            # Dùng cache để giải quyết triệt để lỗi Race Condition / Service Worker trên Streamlit Cloud
-            user_info = exchange_code(code, redirect_uri)
+            user_info = exchange_code(code, hardcoded_uri)
             
             st.session_state["connected"] = True
             st.session_state["user_info"] = user_info
@@ -1082,6 +1084,7 @@ try:
             st.rerun()
         except Exception as e:
             st.error(f"Đã xảy ra lỗi khi xác thực với Google: {e}")
+            st.code(f"Debug: URI='{hardcoded_uri}', Code='{code[:10]}...', Error='{str(e)}'")
             st.warning("Lỗi này do phiên đăng nhập đã quá hạn hoặc mã đã được sử dụng.")
             if st.button("Tải lại trang sạch (Clear URL)"):
                 st.query_params.clear()
@@ -1092,9 +1095,15 @@ try:
         st.title("🔐 Hệ thống Phân tích Thống kê Nghiên cứu")
         st.info("Vui lòng đăng nhập bằng tài khoản Google để tiếp tục sử dụng hệ thống.")
         
-        # Sửa lỗi 403 trên Streamlit Cloud do bị bọc trong iframe: Thay target="_self" thành target="_top"
         try:
-            auth_url = authenticator.get_authorization_url()
+            import google_auth_oauthlib.flow
+            flow_btn = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
+                'google_credentials.json',
+                scopes=["openid", "https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"],
+                redirect_uri=hardcoded_uri,
+            )
+            auth_url, _ = flow_btn.authorization_url(access_type="offline", include_granted_scopes="true")
+            
             html_content = f"""
             <div style="display: flex; justify-content: center; margin-top: 20px;">
                 <a href="{auth_url}" target="_blank" style="background-color: #4285f4; color: #fff; text-decoration: none; text-align: center; font-size: 16px; margin: 4px 2px; cursor: pointer; padding: 8px 16px; border-radius: 4px; display: flex; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
