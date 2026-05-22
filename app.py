@@ -1812,7 +1812,7 @@ with st.sidebar:
     step3 = "✅ Đã sẵn sàng" if st.session_state.get('df') is not None and st.session_state.get('current_roadmap') else "⏳ Đang chờ"
     
     st.markdown(f"""
-    1. **Bài toán AI**: {step1}
+    1. **Bài toán**: {step1}
     2. **Dữ liệu thô**: {step2}
     3. **Phân tích**: {step3}
     4. **Báo cáo**: 🏁 Đích đến
@@ -1868,7 +1868,7 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
         
         id_method = st.radio(
             "🔍 Phương thức nhập liệu:",
-            ["Mô tả đề tài (AI)", "Tải file bài luận (AI)", "Nhập thủ công (Không AI)"],
+            ["Mô tả đề tài (AI)", "Tải file bài luận", "Nhập thủ công"],
             horizontal=True,
             key="id_method_radio"
         )
@@ -1909,7 +1909,7 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
                 rec = recognize_problem_ai(ai_prompt)
                 st.session_state.current_rec = rec
 
-    elif id_method == "Tải file bài luận (AI)":
+    elif id_method == "Tải file bài luận":
         uploaded_essay = st.file_uploader("📂 Tải file bài luận (.txt, .docx, .pdf):", type=["txt", "docx", "pdf"], key="essay_uploader")
         
         auto_detect = st.checkbox("🤖 AI tự động nhận diện trình độ", value=True, key="auto_detect_lvl")
@@ -1951,7 +1951,7 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
             else:
                 st.warning("Vui lòng chọn file bài luận để tải lên.")
 
-    else: # Nhập thủ công (Không AI)
+    else: # Nhập thủ công
         topic_name = st.text_input("📝 Tên đề tài nghiên cứu:", value=st.session_state.get('manual_topic', ''), key="manual_topic_input")
         problem_desc = st.text_area("📄 Mô tả bài toán (tài toán):", value=st.session_state.get('manual_desc', ''), height=80, key="manual_desc_input")
         
