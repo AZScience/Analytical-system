@@ -1047,9 +1047,9 @@ try:
         redirect_uri=redirect_uri,
     )
     
-    # Xác định chắc chắn môi trường để chốt Redirect URI
-    is_cloud = "GOOGLE_CREDENTIALS" in st.secrets
-    hardcoded_uri = "https://baitoankinhte.streamlit.app/" if is_cloud else "http://localhost:8501/"
+    # Lấy Redirect URI từ cấu hình (bắt buộc phải khớp với Google Console và đường dẫn thực tế của app)
+    # Không hardcode cứng để tránh trường hợp bạn đổi tên app trên Streamlit Cloud
+    redirect_uri = st.secrets.get("REDIRECT_URI", "http://localhost:8501/")
 
     # Hàm đổi mã code lấy thông tin user sử dụng trực tiếp thư viện requests để xem lỗi chi tiết từ Google
     def exchange_code(auth_code, uri):
@@ -1119,7 +1119,7 @@ try:
     code = st.query_params.get("code")
     if code and not st.session_state.get("connected"):
         try:
-            user_info = exchange_code(code, hardcoded_uri)
+            user_info = exchange_code(code, redirect_uri)
             
             st.session_state["connected"] = True
             st.session_state["user_info"] = user_info
@@ -1128,7 +1128,7 @@ try:
             st.rerun()
         except Exception as e:
             st.error("Đã xảy ra lỗi khi xác thực với Google")
-            st.code(f"Debug: URI='{hardcoded_uri}'\nCode='{code[:10]}...'\nError: {str(e)}")
+            st.code(f"Debug: URI='{redirect_uri}'\nCode='{code[:10]}...'\nError: {str(e)}")
             st.warning("Lỗi này do cấu hình Google Cloud không khớp hoặc mã đã được sử dụng.")
             if st.button("Tải lại trang sạch (Clear URL)"):
                 st.query_params.clear()
