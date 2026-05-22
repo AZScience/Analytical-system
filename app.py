@@ -1454,7 +1454,7 @@ try:
     if not auth_manager.can_use(user_email):
         # Cho phép tiếp tục nếu họ đã có phân tích hoạt động hoặc đang chạy lộ trình trong session hiện tại
         has_active_session = (
-            st.session_state.get('current_roadmap') is not None or
+            bool(st.session_state.get('current_roadmap')) or
             st.session_state.get('current_rec') is not None or
             st.session_state.get('essay_analysis_results') is not None
         )
