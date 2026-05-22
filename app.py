@@ -1298,6 +1298,8 @@ st.set_page_config(
 # ─────────────────────────────────────────────────────────────────────────────
 try:
     import auth_manager
+    import importlib
+    importlib.reload(auth_manager)
     from streamlit_google_auth import Authenticate
     
     auth_manager.setup_google_credentials()
@@ -1449,14 +1451,21 @@ try:
     user_email = st.session_state['user_info'].get('email')
     user_name = st.session_state['user_info'].get('name')
     if not auth_manager.can_use(user_email):
-        st.error(f"Tài khoản {user_email} đã hết lượt sử dụng miễn phí.")
-        st.warning("Vui lòng liên hệ Admin (ngviphuc@gmail.com) để gia hạn.")
-        if st.button("Đăng xuất"):
-            st.session_state['connected'] = False
-            st.session_state['user_info'] = None
-            st.query_params.clear()
-            st.rerun()
-        st.stop()
+        # Cho phép tiếp tục nếu họ đã có phân tích hoạt động hoặc đang chạy lộ trình trong session hiện tại
+        has_active_session = (
+            st.session_state.get('current_roadmap') is not None or
+            st.session_state.get('current_rec') is not None or
+            st.session_state.get('essay_analysis_results') is not None
+        )
+        if not has_active_session:
+            st.error(f"Tài khoản {user_email} đã hết lượt sử dụng miễn phí.")
+            st.warning("Vui lòng liên hệ Admin (ngviphuc@gmail.com) để gia hạn.")
+            if st.button("Đăng xuất"):
+                st.session_state['connected'] = False
+                st.session_state['user_info'] = None
+                st.query_params.clear()
+                st.rerun()
+            st.stop()
     
     # Hiển thị thông tin user ở Sidebar
     with st.sidebar:
@@ -1470,7 +1479,7 @@ try:
             st.query_params.clear()
             st.rerun()
         st.markdown("---")
-        st.caption("Phiên bản hệ thống: b324d1e (GSpread Live)")
+        st.caption("Phiên bản hệ thống: GSpread Live (Đồng bộ trực tiếp)")
 except Exception as e:
     st.error("Chưa cấu hình Google Cloud API Credentials trong thư mục/secrets.")
     st.info(str(e))
@@ -2170,6 +2179,9 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
             if not ai_prompt:
                 st.warning("Vui lòng nhập mô tả để AI bắt đầu phân tích.")
             else:
+                user_email = st.session_state.get('user_info', {}).get('email')
+                if run_ai and user_email: 
+                    auth_manager.increment_usage(user_email)
                 rec = recognize_problem_ai(ai_prompt)
                 st.session_state.current_rec = rec
                 st.session_state.essay_analysis_results = None
@@ -2196,6 +2208,8 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
         
         if run_ai:
             if uploaded_essay is not None:
+                user_email = st.session_state.get('user_info', {}).get('email')
+                if user_email: auth_manager.increment_usage(user_email)
                 with st.spinner("🔍 Đang đọc và phân tích nội dung file..."):
                     file_content = extract_text_from_file_ai(uploaded_essay)
                     if file_content == "ERROR_MISSING_DOCX":
@@ -2242,6 +2256,8 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
             if not topic_name:
                 st.warning("Vui lòng nhập tên đề tài.")
             else:
+                user_email = st.session_state.get('user_info', {}).get('email')
+                if user_email: auth_manager.increment_usage(user_email)
                 st.session_state.ai_prompt_val = topic_name
                 st.session_state.manual_topic = topic_name
                 st.session_state.manual_desc = problem_desc
@@ -2450,8 +2466,6 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
         st.write("")
         st.info(f"💡 **Lời khuyên nghiên cứu:** Với trình độ **{LEVEL_LABELS_AI[ai_level]['label']}**, ngoài việc tính toán {roadmap[0].lower() if roadmap else 'các tham số'}, bạn cần đặc biệt chú ý đến **{roadmap[2] if len(roadmap)>2 else 'các chỉ số'}** và sử dụng **{roadmap[3] if len(roadmap)>3 else 'biểu đồ'}** để minh họa trực quan kết quả, giúp tăng tính thuyết phục cho bài nghiên cứu.")
         if st.button("📌 Xác nhận lộ trình này & Sang Bước 2", use_container_width=True, type="primary"):
-            user_email = st.session_state.get('user_info', {}).get('email')
-            if user_email: auth_manager.increment_usage(user_email)
             st.session_state.current_roadmap = roadmap
             st.session_state.ai_analysis_type = rec['label']
             st.session_state.academic_level = LEVEL_LABELS_AI[ai_level]['label']
