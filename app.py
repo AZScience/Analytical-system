@@ -1064,6 +1064,8 @@ try:
                 creds = json.load(f)
                 if 'web' in creds:
                     creds = creds['web']
+                elif 'installed' in creds:
+                    creds = creds['installed']
                     
             token_url = "https://oauth2.googleapis.com/token"
             data = {
@@ -1073,6 +1075,14 @@ try:
                 'grant_type': 'authorization_code',
                 'redirect_uri': uri
             }
+            
+            # Đọc code_verifier từ file state nếu có (Hỗ trợ PKCE)
+            state = st.query_params.get("state")
+            if state:
+                state_file = os.path.join(cache_dir, f"state_{state}.txt")
+                if os.path.exists(state_file):
+                    with open(state_file, 'r') as f:
+                        data['code_verifier'] = f.read().strip()
             
             resp = requests.post(token_url, data=data)
             if resp.status_code != 200:
@@ -1135,12 +1145,28 @@ try:
         
         try:
             import google_auth_oauthlib.flow
+            import os
+            import tempfile
+            
             flow_btn = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
                 'google_credentials.json',
                 scopes=["openid", "https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"],
                 redirect_uri=redirect_uri,
             )
-            auth_url, _ = flow_btn.authorization_url(access_type="offline", include_granted_scopes="true")
+            
+            # Ép buộc dùng PKCE (Google bắt buộc với một số Client Type)
+            auth_url, state = flow_btn.authorization_url(
+                access_type="offline", 
+                include_granted_scopes="true",
+                code_challenge_method="S256"
+            )
+            
+            # Lưu code_verifier vào file tạm theo state để dùng khi callback
+            if hasattr(flow_btn, "code_verifier") and flow_btn.code_verifier:
+                cache_dir = os.path.join(tempfile.gettempdir(), "oauth_cache")
+                os.makedirs(cache_dir, exist_ok=True)
+                with open(os.path.join(cache_dir, f"state_{state}.txt"), "w") as f:
+                    f.write(flow_btn.code_verifier)
             
             html_content = f"""
             <div style="display: flex; justify-content: center; margin-top: 20px;">
