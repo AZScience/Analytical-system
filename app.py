@@ -23,6 +23,7 @@ if 'is_cleaned' not in st.session_state: st.session_state.is_cleaned = False
 if 'optimization_logs' not in st.session_state: st.session_state.optimization_logs = []
 if 'cleaning_logs' not in st.session_state: st.session_state.cleaning_logs = []
 if 'results' not in st.session_state: st.session_state.results = None
+if 'essay_analysis_results' not in st.session_state: st.session_state.essay_analysis_results = None
 
 # --- Hộp thoại Nhập liệu Thủ công (Giao diện SPSS Style) ---
 @st.dialog("📝 Nhập Phiếu Khảo Sát (Dữ liệu thô)")
@@ -1020,6 +1021,268 @@ def recognize_problem_ai(prompt: str):
         "label": PROBLEMS_AI[best]["label"]
     }
 
+def analyze_essay_details(text: str, active_problem_id: str = None) -> dict:
+    """
+    Phân tích chi tiết bài luận bằng quy tắc (Rule-based NLP heuristic).
+    Trả về: Tóm tắt đề tài, đánh giá mức độ phù hợp với SPSS, 
+    điểm số (thang điểm 10) theo 5 tiêu chí, các điểm đạt được và chưa đạt được.
+    """
+    import re
+    
+    # 1. Chuẩn hóa văn bản
+    text_clean = text.strip()
+    lines = [l.strip() for l in text_clean.split('\n') if l.strip()]
+    text_lc = text_clean.lower()
+    text_no_tone = remove_tones_ai(text_lc)
+    
+    # 2. Trích xuất Tên đề tài (Title)
+    title = "Đề tài Nghiên cứu từ File Bài luận"
+    found_title = False
+    for line in lines[:15]:
+        line_lc = line.lower()
+        if any(prefix in line_lc for prefix in ["de tai:", "de tai nghien cuu:", "ten de tai:", "ten de tai nghien cuu:", "de tai khoa luan:", "de tai luan van:"]):
+            parts = line.split(':', 1)
+            if len(parts) > 1 and len(parts[1].strip()) > 10:
+                title = parts[1].strip()
+                found_title = True
+                break
+    
+    if not found_title:
+        for line in lines[:10]:
+            line_len = len(line)
+            line_lc = line.lower()
+            if 15 < line_len < 150 and not any(kw in line_lc for kw in [
+                "truong dai hoc", "khoa ", "giang vien", "sinh vien", "mssv", "lop:", "hoc phan", "khoa luan", "luan van", "de tai", "nguoi thuc hien"
+            ]):
+                title = line
+                found_title = True
+                break
+                
+    if not found_title and lines:
+        if len(lines[0]) > 10:
+            title = lines[0]
+            
+    title = re.sub(r'^["\'“‘]+|["\'”’]+$', '', title).strip()
+
+    # 3. Trích xuất Mục tiêu Nghiên cứu (Objectives)
+    sentences = re.split(r'[.!?\n]+', text_clean)
+    objectives = []
+    objective_keywords = [
+        "muc tieu", "muc dich", "nham", "de danh gia", "de khao sat", "nghien cuu nay nham", 
+        "tieu nghien cuu", "nham xac dinh", "nham phan tich", "huong toi", "nghien cuu nham"
+    ]
+    seen_sentences = set()
+    for s in sentences:
+        s_strip = s.strip()
+        if len(s_strip) < 25 or len(s_strip) > 200:
+            continue
+        s_lc_no_tone = remove_tones_ai(s_strip.lower())
+        if any(kw in s_lc_no_tone for kw in objective_keywords):
+            s_norm = re.sub(r'\s+', ' ', s_strip)
+            if s_norm not in seen_sentences:
+                seen_sentences.add(s_norm)
+                objectives.append(s_norm)
+        if len(objectives) >= 4:
+            break
+            
+    if not objectives:
+        objectives = [
+            "Khảo sát và đánh giá thực trạng các khía cạnh liên quan đến đề tài nghiên cứu.",
+            "Phân tích mối quan hệ giữa các biến số/nhân tố được đề xuất trong mô hình.",
+            "Đề xuất một số hàm ý quản trị, giải pháp nâng cao hiệu quả dựa trên kết quả thống kê."
+        ]
+
+    # 4. Trích xuất Mô hình & Nhân tố/Biến số (Variables)
+    variables = []
+    var_keywords = [
+        "nhan to", "bien doc lap", "bien phu thuoc", "gia thuyet", "tac dong", "anh huong", 
+        "bien quan sat", "thang do", "nhan to doc lap", "nhan to phu thuoc"
+    ]
+    seen_vars = set()
+    for s in sentences:
+        s_strip = s.strip()
+        if len(s_strip) < 20 or len(s_strip) > 150:
+            continue
+        s_lc_no_tone = remove_tones_ai(s_strip.lower())
+        if any(kw in s_lc_no_tone for kw in var_keywords) and any(kw in s_lc_no_tone for kw in ["bien", "nhan to", "gia thuyet"]):
+            s_norm = re.sub(r'\s+', ' ', s_strip)
+            if s_norm not in seen_vars:
+                seen_vars.add(s_norm)
+                variables.append(s_norm)
+        if len(variables) >= 4:
+            break
+            
+    if not variables:
+        variables = [
+            "Các nhân tố ảnh hưởng (được đo lường qua bảng câu hỏi khảo sát).",
+            "Biến phụ thuộc hoặc biến mục tiêu cần đánh giá kết quả.",
+            "Các giả thuyết tác động tuyến tính giữa nhân tố độc lập và nhân tố phụ thuộc."
+        ]
+
+    # 5. Trích xuất Thông tin Mẫu khảo sát (Sample size)
+    sample_size = None
+    sample_info = "Chưa xác định rõ thông tin mẫu khảo sát trong file."
+    
+    sample_patterns = [
+        r'(?:co mau|quy mo mau|so luong mau|thu ve|phat ra|thu thap duoc|co duoc|thu thap)\s*(?:la|khoang|dat|toi thieu|duoc)?\s*(\d+)',
+        r'(\d+)\s*(?:phieu khao sat|mau|quan sat|phan hoi|nguoi tra loi|nguoi tham gia)',
+        r'[nN]\s*=\s*(\d+)'
+    ]
+    
+    found_size = None
+    for pattern in sample_patterns:
+        matches = re.findall(pattern, text_no_tone)
+        if matches:
+            for m in matches:
+                try:
+                    val = int(m)
+                    if 50 <= val <= 5000:
+                        found_size = val
+                        break
+                except ValueError:
+                    continue
+        if found_size:
+            break
+            
+    if found_size:
+        sample_size = found_size
+        sample_info = f"Đã phát hiện quy mô mẫu: {sample_size} quan sát/phiếu khảo sát."
+    else:
+        matches = re.findall(r'(\d+)\s*(?:mau|phieu|quan sat)', text_no_tone)
+        if matches:
+            try:
+                val = int(matches[0])
+                if 50 <= val <= 2000:
+                    sample_size = val
+                    sample_info = f"Đã phát hiện quy mô mẫu dự kiến: {sample_size} quan sát."
+            except ValueError:
+                pass
+                
+    # 6. Chấm điểm 5 Tiêu chí (Thang điểm 10)
+    score_details = {}
+    
+    # Tiêu chí 1: Tổng quan & Đặt vấn đề (max 2.0)
+    s1 = 0.5
+    if found_title: s1 += 0.5
+    if any(k in text_no_tone for k in ["gioi thieu", "dat van de", "ly do chon de tai", "tinh cap thiet", "tong quan"]):
+        s1 += 0.5
+    if len(text_clean) > 800:
+        s1 += 0.5
+    score_details["overview"] = round(s1, 1)
+    
+    # Tiêu chí 2: Mục tiêu & Giả thuyết (max 2.0)
+    s2 = 0.5
+    if len(seen_sentences) > 0: s2 += 0.5
+    if any(k in text_no_tone for k in ["gia thuyet", "h0", "h1", "gia thuyet nghien cuu", "ki vong"]):
+        s2 += 0.5
+    if len(seen_sentences) >= 3 or "gia thuyet" in text_no_tone:
+        s2 += 0.5
+    score_details["objectives"] = round(s2, 1)
+    
+    # Tiêu chí 3: Mô hình & Biến số (max 2.0)
+    s3 = 0.5
+    if any(k in text_no_tone for k in ["bien doc lap", "bien phu thuoc", "nhan to", "thang do"]):
+        s3 += 0.5
+    if any(k in text_no_tone for k in ["mo hinh nghien cuu", "mo hinh ly thuyet", "khung ly thuyet", "so do mo hinh"]):
+        s3 += 0.5
+    if len(variables) >= 3 and any(k in text_no_tone for k in ["tac dong", "anh huong"]):
+        s3 += 0.5
+    score_details["variables"] = round(s3, 1)
+    
+    # Tiêu chí 4: Phương pháp & Mẫu khảo sát (max 2.0)
+    s4 = 0.5
+    if any(k in text_no_tone for k in ["co mau", "chon mau", "khao sat", "thu thap duoc", "likert"]):
+        s4 += 0.5
+    if sample_size is not None:
+        s4 += 0.5
+        if sample_size >= 150:
+            s4 += 0.5
+    else:
+        if any(k in text_no_tone for k in ["doi tuong khao sat", "phieu hoi", "bang cau hoi"]):
+            s4 += 0.3
+    score_details["methodology"] = round(min(2.0, s4), 1)
+    
+    # Tiêu chí 5: Kế hoạch Phân tích Định lượng (max 2.0)
+    s5 = 0.5
+    quant_tests = ["cronbach", "alpha", "efa", "nhan to kham pha", "hoi quy", "tuong quan", "t-test", "anova", "spss", "kiem dinh"]
+    matched_tests = [k for k in quant_tests if k in text_no_tone]
+    s5 += min(1.0, len(matched_tests) * 0.25)
+    if len(matched_tests) >= 3:
+        s5 += 0.5
+    score_details["analysis_plan"] = round(min(2.0, s5), 1)
+    
+    total_score = round(sum(score_details.values()), 1)
+    
+    # 7. Đánh giá Mức độ Phù hợp với SPSS (%)
+    quant_kws = ["cronbach", "alpha", "efa", "nhan to kham pha", "hoi quy", "regression", "tuong quan", "correlation", "t-test", "anova", "spss", "kiem dinh", "dinh luong", "thang do likert", "bien quan sat"]
+    found_quant_kws = [k for k in quant_kws if k in text_no_tone]
+    suitability_pct = min(100, int((len(found_quant_kws) / 8) * 100))
+    if sample_size and sample_size >= 100:
+        suitability_pct = min(100, suitability_pct + 15)
+        
+    if suitability_pct >= 70:
+        suitability_status = "🟢 Phù hợp cao"
+        suitability_desc = "Đề tài định lượng đầy đủ, mô hình và dữ liệu rõ ràng, rất thích hợp để phân tích các mô hình SPSS phức tạp (Cronbach's Alpha, EFA, Hồi quy)."
+    elif suitability_pct >= 40:
+        suitability_status = "🟡 Phù hợp trung bình"
+        suitability_desc = "Đề tài có định hướng định lượng nhưng thiếu thông tin chi tiết về mô hình, biến số hoặc kích thước mẫu. Cần bổ sung thêm giả thuyết/thang đo cụ thể."
+    else:
+        suitability_status = "🔴 Phù hợp thấp"
+        suitability_desc = "Đề tài nghiên cứu mang tính định tính, mô tả hoặc tổng quan lý thuyết đơn thuần. Chưa có dấu hiệu chuẩn bị dữ liệu khảo sát và các biến số phù hợp cho SPSS."
+
+    # 8. Cái làm được & Cái chưa làm được
+    accomplishments = []
+    gaps = []
+    
+    if found_title:
+        accomplishments.append("Đã xác định rõ tên đề tài nghiên cứu cụ thể trong file bài luận.")
+    else:
+        gaps.append("Tên đề tài chưa nổi bật hoặc thiếu dòng tiêu đề phân tách rõ ràng.")
+        
+    if len(seen_sentences) > 0 and score_details["objectives"] >= 1.0:
+        accomplishments.append("Mục tiêu nghiên cứu được xác định và phát biểu rõ ràng.")
+    else:
+        gaps.append("Chưa phát biểu rõ ràng các mục tiêu nghiên cứu cụ thể bằng câu khẳng định.")
+        
+    if score_details["variables"] >= 1.5:
+        accomplishments.append("Đã phác thảo được khung mô hình lý thuyết hoặc các biến số nhân tố ảnh hưởng.")
+    else:
+        gaps.append("Chưa làm rõ các biến số độc lập, biến phụ thuộc và các giả thuyết tác động định lượng.")
+        
+    if sample_size:
+        if sample_size >= 150:
+            accomplishments.append(f"Quy mô mẫu dự kiến ({sample_size} mẫu) đạt chuẩn tốt cho phân tích định lượng EFA và Hồi quy bội.")
+        else:
+            accomplishments.append(f"Đã bước đầu ước lượng được kích thước mẫu ({sample_size} mẫu).")
+            gaps.append(f"Kích thước mẫu hiện tại ({sample_size}) hơi nhỏ. Khuyến nghị tăng lên tối thiểu 150 - 200 mẫu để các kết quả kiểm định EFA/Hồi quy đạt độ tin cậy.")
+    else:
+        gaps.append("Thiếu thông tin quy mô mẫu khảo sát (cần làm rõ đối tượng khảo sát và số lượng phiếu dự kiến).")
+        
+    if score_details["analysis_plan"] >= 1.5:
+        accomplishments.append("Đã lên kế hoạch chi tiết cho các bước kiểm định SPSS (Cronbach's Alpha, EFA, Hồi quy tuyến tính).")
+    else:
+        gaps.append("Chưa định hướng rõ ràng các công cụ phân tích thống kê định lượng cần sử dụng (cần bổ sung Cronbach's Alpha, EFA, Hồi quy).")
+        
+    if len(text_clean) > 1500:
+        accomplishments.append("Nội dung bài luận có độ dài đầy đủ, cung cấp nhiều thông tin phân tích bổ sung.")
+    else:
+        gaps.append("Nội dung bài luận còn ngắn hoặc mang tính chất đề cương sơ lược, cần bổ sinh lập luận và cơ sở lý thuyết sâu hơn.")
+
+    return {
+        "title": title,
+        "objectives": objectives,
+        "variables": variables,
+        "sample_size": sample_size,
+        "sample_info": sample_info,
+        "scores": score_details,
+        "total_score": total_score,
+        "suitability_pct": suitability_pct,
+        "suitability_status": suitability_status,
+        "suitability_desc": suitability_desc,
+        "accomplishments": accomplishments,
+        "gaps": gaps
+    }
+
 # ─────────────────────────────────────────────────────────────────────────────
 # CẤU HÌNH TRANG
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1868,7 +2131,7 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
         
         id_method = st.radio(
             "🔍 Phương thức nhập liệu:",
-            ["Mô tả đề tài (AI)", "Tải file bài luận", "Nhập thủ công"],
+            ["Mô tả bài toán", "Tải file bài luận", "Nhập thủ công"],
             horizontal=True,
             key="id_method_radio"
         )
@@ -1881,7 +2144,7 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
     roadmap = st.session_state.get('current_roadmap', [])
     run_ai = False
     
-    if id_method == "Mô tả đề tài (AI)":
+    if id_method == "Mô tả bài toán":
         ai_prompt = st.text_area("✍️ Nhập mô tả đề tài hoặc bài toán của bạn:", 
                                value=st.session_state.ai_prompt_val,
                                placeholder="Ví dụ: Phân tích các nhân tố ảnh hưởng đến sự hài lòng của khách hàng...",
@@ -1908,6 +2171,7 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
             else:
                 rec = recognize_problem_ai(ai_prompt)
                 st.session_state.current_rec = rec
+                st.session_state.essay_analysis_results = None
 
     elif id_method == "Tải file bài luận":
         uploaded_essay = st.file_uploader("📂 Tải file bài luận (.txt, .docx, .pdf):", type=["txt", "docx", "pdf"], key="essay_uploader")
@@ -1940,13 +2204,13 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
                     elif not file_content.strip():
                         st.error("❌ Không thể trích xuất văn bản từ file hoặc file trống.")
                     else:
-                        # Nhận diện bài toán từ 2000 ký tự đầu tiên để nhanh và chính xác
                         rec = recognize_problem_ai(file_content[:2000])
                         st.session_state.current_rec = rec
                         if auto_detect:
                             ai_level = detect_level_ai(file_content)
                             st.session_state.ai_level_val = ai_level
-                        # Lưu tên file vào prompt val để hiển thị
+                        essay_results = analyze_essay_details(file_content, rec.get('problem_id'))
+                        st.session_state.essay_analysis_results = essay_results
                         st.session_state.ai_prompt_val = f"Dựa trên file: {uploaded_essay.name}"
             else:
                 st.warning("Vui lòng chọn file bài luận để tải lên.")
@@ -1955,7 +2219,6 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
         topic_name = st.text_input("📝 Tên đề tài nghiên cứu:", value=st.session_state.get('manual_topic', ''), key="manual_topic_input")
         problem_desc = st.text_area("📄 Mô tả bài toán (tài toán):", value=st.session_state.get('manual_desc', ''), height=80, key="manual_desc_input")
         
-        # Cấu trúc 1 cột đầy màn hình
         prob_options = list(PROBLEMS_AI.keys())
         problem_type = st.selectbox("📊 Loại bài toán:", 
                                   options=prob_options,
@@ -1981,7 +2244,6 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
                 st.session_state.ai_prompt_val = topic_name
                 st.session_state.manual_topic = topic_name
                 st.session_state.manual_desc = problem_desc
-                # Tạo rec giả lập từ thông tin thủ công
                 rec = {
                     "problem_id": problem_type,
                     "label": PROBLEMS_AI[problem_type]["label"],
@@ -1990,13 +2252,111 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
                     "is_custom": False
                 }
                 st.session_state.current_rec = rec
+                st.session_state.essay_analysis_results = None
 
-    # Xử lý hiển thị kết quả nếu đã có rec hoặc đang trong session
     if rec is None:
         rec = st.session_state.get('current_rec')
         
     if rec:
         st.subheader("📊 Kết quả Nhận diện")
+        
+        if id_method == "Tải file bài luận" and st.session_state.get('essay_analysis_results'):
+            res = st.session_state.essay_analysis_results
+            
+            st.write("")
+            st.markdown("### 📝 Kết quả Đánh giá & Chấm điểm Bài luận")
+            
+            col_m1, col_m2 = st.columns(2)
+            with col_m1:
+                score_val = res['total_score']
+                score_color = "#22c55e" if score_val >= 7.0 else ("#eab308" if score_val >= 5.0 else "#ef4444")
+                st.markdown(f"""
+                <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; border-left: 8px solid {score_color}; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+                    <div style="font-size: 0.9rem; color: #64748b; font-weight: 600; text-transform: uppercase;">Điểm Đánh Giá Tổng Thể</div>
+                    <div style="display: flex; align-items: baseline; margin-top: 10px;">
+                        <span style="font-size: 3rem; font-weight: 800; color: {score_color};">{score_val}</span>
+                        <span style="font-size: 1.5rem; color: #94a3b8; font-weight: 500; margin-left: 5px;">/ 10</span>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #475569; margin-top: 10px;">
+                        Xếp loại học thuật dự kiến: <b>{"Xuất sắc/Giỏi" if score_val >= 8.0 else ("Khá" if score_val >= 6.5 else ("Trung bình" if score_val >= 5.0 else "Cần cải thiện"))}</b>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+            with col_m2:
+                suit_pct = res['suitability_pct']
+                suit_status = res['suitability_status']
+                suit_color = "#22c55e" if suit_pct >= 70 else ("#eab308" if suit_pct >= 40 else "#ef4444")
+                st.markdown(f"""
+                <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; border-left: 8px solid {suit_color}; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+                    <div style="font-size: 0.9rem; color: #64748b; font-weight: 600; text-transform: uppercase;">Độ Phù Hợp SPSS</div>
+                    <div style="display: flex; align-items: baseline; margin-top: 10px;">
+                        <span style="font-size: 3rem; font-weight: 800; color: {suit_color};">{suit_pct}%</span>
+                        <span style="font-size: 1.1rem; color: {suit_color}; font-weight: 600; margin-left: 10px;">{suit_status}</span>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #475569; margin-top: 10px;">
+                        {res['suitability_desc']}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+            st.write("")
+            
+            with st.expander("📊 Xem Chi Tiết Bảng Điểm 5 Tiêu Chí (Thang Điểm 10)", expanded=True):
+                st.markdown("Bảng đánh giá cấu trúc bài luận định lượng theo các tiêu chí chuẩn nghiên cứu khoa học:")
+                
+                criteria_labels = {
+                    "overview": ("🌐 1. Tổng quan & Đặt vấn đề", "Đánh giá mức độ rõ ràng của tiêu đề, tính cấp thiết và lý do chọn đề tài."),
+                    "objectives": ("🎯 2. Mục tiêu & Giả thuyết", "Xem xét sự hiện diện của câu hỏi nghiên cứu, mục tiêu cụ thể và các giả thuyết tác động."),
+                    "variables": ("🧬 3. Mô hình & Biến số", "Đo lường mức độ định hình các nhân tố, biến độc lập/phụ thuộc và thang đo lý thuyết."),
+                    "methodology": ("📐 4. Phương pháp & Mẫu khảo sát", "Kiểm tra sự đầy đủ về cỡ mẫu khảo sát, quy trình chọn mẫu và thu thập thông tin."),
+                    "analysis_plan": ("📈 5. Kế hoạch Phân tích Định lượng", "Đánh giá định hướng sử dụng các công cụ SPSS (Cronbach's Alpha, EFA, Hồi quy).")
+                }
+                
+                for key, (label, desc) in criteria_labels.items():
+                    c_score = res['scores'][key]
+                    c_pct = c_score / 2.0
+                    st.markdown(f"**{label}** ({c_score} / 2.0đ)")
+                    st.caption(desc)
+                    st.progress(c_pct)
+            
+            with st.expander("📚 Tóm Tắt Nội Dung Nghiên Cứu Đã Trích Xuất", expanded=True):
+                st.markdown(f"**📌 Tên đề tài:** `{res['title']}`")
+                
+                t1, t2 = st.columns(2)
+                with t1:
+                    st.markdown("**🎯 Các mục tiêu nghiên cứu tiêu biểu:**")
+                    for obj in res['objectives']:
+                        st.markdown(f"- {obj}")
+                with t2:
+                    st.markdown("**🧬 Biến số & Mối quan hệ tiềm năng:**")
+                    for var in res['variables']:
+                        st.markdown(f"- {var}")
+                        
+                st.markdown(f"**📊 Thông tin khảo sát:** {res['sample_info']}")
+                
+            st.write("")
+            col_acc, col_gaps = st.columns(2)
+            
+            with col_acc:
+                st.markdown("#### 🟢 Điểm đạt được (Cái làm được)")
+                for acc in res['accomplishments']:
+                    st.markdown(f"""
+                    <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px; margin-bottom: 8px; color: #166534; font-size: 0.9rem; display: flex; align-items: center;">
+                        <span style="font-size: 1.2rem; margin-right: 8px;">✓</span> {acc}
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+            with col_gaps:
+                st.markdown("#### 🔴 Điểm cần cải thiện (Cái chưa làm được)")
+                for gap in res['gaps']:
+                    st.markdown(f"""
+                    <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 10px; margin-bottom: 8px; color: #991b1b; font-size: 0.9rem; display: flex; align-items: center;">
+                        <span style="font-size: 1.2rem; margin-right: 8px;">⚠</span> {gap}
+                    </div>
+                    """, unsafe_allow_html=True)
+            st.markdown("---")
+
         st.success(f"**Loại bài toán:** {rec['label']}")
         st.markdown(f"**Từ khóa phát hiện:** {', '.join(rec['matched'])}")
         
