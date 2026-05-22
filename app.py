@@ -1050,9 +1050,12 @@ try:
     # Thay thế authenticator.check_authentification() bằng mã tự viết để gỡ lỗi và chống vòng lặp
     if "connected" not in st.session_state:
         st.session_state["connected"] = False
+    if "processing_code" not in st.session_state:
+        st.session_state["processing_code"] = False
 
     code = st.query_params.get("code")
-    if code and not st.session_state.get("connected"):
+    if code and not st.session_state.get("connected") and not st.session_state.get("processing_code"):
+        st.session_state["processing_code"] = True
         try:
             import google_auth_oauthlib.flow
             from googleapiclient.discovery import build
@@ -1075,7 +1078,13 @@ try:
             st.query_params.clear()
             st.rerun()
         except Exception as e:
+            st.session_state["processing_code"] = False
             st.error(f"Đã xảy ra lỗi khi xác thực với Google: {e}")
+            st.warning("Lỗi này thường do trình duyệt tải trang 2 lần cùng lúc hoặc tải lại trang chứa mã code cũ.")
+            if st.button("Tải lại trang sạch (Clear URL)"):
+                st.query_params.clear()
+                st.rerun()
+            st.stop()
             
     if not st.session_state.get('connected'):
         st.title("🔐 Hệ thống Phân tích Thống kê Nghiên cứu")
