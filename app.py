@@ -1107,22 +1107,27 @@ try:
 
     code = st.query_params.get("code")
     if code and not st.session_state.get("connected"):
-        try:
-            user_info = exchange_code(code, redirect_uri)
-            
-            st.session_state["connected"] = True
-            st.session_state["user_info"] = user_info
-            
-            st.query_params.clear()
-            st.rerun()
-        except Exception as e:
-            st.error("Đã xảy ra lỗi khi xác thực với Google")
-            st.code(f"Debug: URI='{redirect_uri}'\nCode='{code[:10]}...'\nError: {str(e)}")
-            st.warning("Gợi ý: Hãy xóa mã ?code=... trên thanh địa chỉ hoặc bấm nút bên dưới để thử lại.")
-            if st.button("Tải lại trang sạch (Clear URL)"):
-                st.query_params.clear()
-                st.rerun()
-            st.stop()
+        st.title("🔐 Xác nhận Đăng nhập")
+        st.info("Đã nhận được mã xác thực an toàn từ Google. Vui lòng bấm nút bên dưới để tiến hành kết nối.")
+        
+        if st.button("🚀 Hoàn tất Đăng nhập", type="primary"):
+            with st.spinner("Đang kết nối với Google..."):
+                try:
+                    user_info = exchange_code(code, redirect_uri)
+                    
+                    st.session_state["connected"] = True
+                    st.session_state["user_info"] = user_info
+                    
+                    st.query_params.clear()
+                    st.rerun()
+                except Exception as e:
+                    st.error("Đã xảy ra lỗi khi trao đổi mã xác thực với Google.")
+                    st.code(f"Debug: URI='{redirect_uri}'\nCode='{code[:10]}...'\nError: {str(e)}")
+                    st.warning("Gợi ý: Mã đăng nhập này có thể đã được sử dụng bởi một tiến trình mạng khác. Vui lòng thử đăng nhập lại.")
+                    if st.button("Tải lại trang sạch"):
+                        st.query_params.clear()
+                        st.rerun()
+        st.stop()
             
     if not st.session_state.get('connected'):
         st.title("🔐 Hệ thống Phân tích Thống kê Nghiên cứu")
