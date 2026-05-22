@@ -1818,9 +1818,11 @@ def main():
     banner("HOÀN THÀNH – TÓM TẮT KẾT QUẢ", char="═")
     
     print("  📁 Các file đầu ra:")
-    for f_path in exported + [chart_path, model_path, form_path]:
-        size = Path(f_path).stat().st_size / 1024
-        print(f"     • {Path(f_path).name:<40} ({size:.1f} KB)")
+    all_files = exported + list(chart_path.values()) + [model_path, form_path]
+    for f_path in all_files:
+        if f_path is not None:
+            size = Path(f_path).stat().st_size / 1024
+            print(f"     • {Path(f_path).name:<40} ({size:.1f} KB)")
     
     print("\n  📊 Tóm tắt kết quả chính:")
     for var_code, cr_info in cronbach_results.items():
