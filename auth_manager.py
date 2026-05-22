@@ -26,11 +26,12 @@ def get_user_limits(email: str):
         
     try:
         conn = st.connection("gsheets", type=GSheetsConnection)
-        df = conn.read(worksheet="Users", usecols=[0, 1, 2])
+        df = conn.read(worksheet="Users", usecols=[0, 1, 2], ttl=0)
         # Đảm bảo cấu trúc cột
         if "Email" not in df.columns:
             df = pd.DataFrame(columns=["Email", "UsageCount", "MaxLimit"])
     except Exception as e:
+        st.warning(f"Lỗi đọc dữ liệu giới hạn từ Google Sheets: {e}")
         df = pd.DataFrame(columns=["Email", "UsageCount", "MaxLimit"])
     
     user_row = df[df["Email"] == email]
@@ -40,11 +41,18 @@ def get_user_limits(email: str):
         df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
         try:
             conn.update(worksheet="Users", data=df)
-        except Exception:
-            pass # Bỏ qua nếu sheet chưa cấu hình ghi
+        except Exception as e:
+            st.error(f"Lỗi ghi nhận user mới vào Google Sheets: {e}")
         return new_row
     
-    return user_row.iloc[0].to_dict()
+    row_dict = user_row.iloc[0].to_dict()
+    try:
+        row_dict["UsageCount"] = int(float(row_dict["UsageCount"]))
+        row_dict["MaxLimit"] = int(float(row_dict["MaxLimit"]))
+    except Exception:
+        row_dict["UsageCount"] = 0
+        row_dict["MaxLimit"] = 3
+    return row_dict
 
 def increment_usage(email: str):
     """Trừ đi 1 lượt sử dụng của user."""
@@ -53,18 +61,24 @@ def increment_usage(email: str):
         
     try:
         conn = st.connection("gsheets", type=GSheetsConnection)
-        df = conn.read(worksheet="Users")
-    except Exception:
+        df = conn.read(worksheet="Users", ttl=0)
+    except Exception as e:
+        st.error(f"Lỗi đọc dữ liệu Google Sheets để cập nhật lượt dùng: {e}")
         return False
         
     user_idx = df.index[df["Email"] == email].tolist()
     if user_idx:
         idx = user_idx[0]
-        df.at[idx, "UsageCount"] = int(df.at[idx, "UsageCount"]) + 1
+        try:
+            current_val = int(float(df.at[idx, "UsageCount"]))
+        except Exception:
+            current_val = 0
+        df.at[idx, "UsageCount"] = current_val + 1
         try:
             conn.update(worksheet="Users", data=df)
-        except Exception:
-            pass
+        except Exception as e:
+            st.error(f"Lỗi cập nhật số lượt dùng lên Google Sheets: {e}")
+            return False
         return True
     return False
 
