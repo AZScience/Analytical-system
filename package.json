@@ -1,0 +1,13 @@
+{
+  "name": "spss-python-assistant",
+  "version": "1.0.0",
+  "description": "Scientific Research Analysis Assistant Dashboard",
+  "main": "app.py",
+  "scripts": {
+    "start": "streamlit run app.py",
+    "dev": "streamlit run app.py",
+    "build": "echo 'Python project: No build step needed. Running environment check...' && pip install -r requirements.txt"
+  },
+  "author": "Antigravity AI",
+  "license": "ISC"
+}

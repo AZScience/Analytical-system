@@ -1,0 +1,104 @@
+═════════════════════════════════════════════════════════════════
+           PHIẾU KHẢO SÁT MỨC ĐỘ HÀI LÒNG CỦA SINH VIÊN
+     ĐỐI VỚI CÔNG TÁC QUẢN LÝ KÝ TÚC XÁ – TRƯỜNG ĐHNTTU
+═════════════════════════════════════════════════════════════════
+
+Kính chào Anh/Chị sinh viên!
+Cuộc khảo sát này nhằm thu thập ý kiến đánh giá của sinh viên đang lưu
+trú tại ký túc xá Trường Đại học Nguyễn Tất Thành. Thông tin chỉ phục
+vụ mục đích nghiên cứu khoa học, được bảo mật hoàn toàn.
+Xin trân trọng cảm ơn!
+
+─────────────────────────────────────────────────────────────────
+PHẦN I: THÔNG TIN NHÂN KHẨU HỌC
+─────────────────────────────────────────────────────────────────
+
+1. Giới tính:     □ Nam     □ Nữ     □ Khác
+2. Bạn đang học năm: □ Năm 1  □ Năm 2  □ Năm 3  □ Năm 4+
+3. Ngành học: ______________________________________
+4. Thời gian sinh sống tại KTX:
+   □ Dưới 1 năm   □ Từ 1–2 năm   □ Trên 2 năm
+5. Chi phí thuê phòng do ai chi trả:
+   □ Tự túc   □ Học bổng/hỗ trợ   □ Gia đình
+
+─────────────────────────────────────────────────────────────────
+PHẦN II: ĐÁNH GIÁ CÁC NHÂN TỐ QUẢN LÝ KÝ TÚC XÁ
+─────────────────────────────────────────────────────────────────
+Thang đo: 1=Hoàn toàn không đồng ý · 2=Không đồng ý · 3=Trung lập
+          4=Đồng ý · 5=Hoàn toàn đồng ý
+
+[CSVC] CƠ SỞ VẬT CHẤT KÝ TÚC XÁ
+──────────────────────────────────────────────────
+   1. (CSVC1) Phòng ở đáp ứng nhu cầu sinh hoạt của sinh viên
+      □1  □2  □3  □4  □5
+   2. (CSVC2) Trang thiết bị trong phòng hoạt động tốt
+      □1  □2  □3  □4  □5
+   3. (CSVC3) Hệ thống điện, nước hoạt động ổn định
+      □1  □2  □3  □4  □5
+   4. (CSVC4) Khu vệ sinh bảo đảm điều kiện sử dụng
+      □1  □2  □3  □4  □5
+   5. (CSVC5) Không gian sinh hoạt chung thuận tiện
+      □1  □2  □3  □4  □5
+
+[AN] AN NINH VÀ AN TOÀN KÝ TÚC XÁ
+──────────────────────────────────────────────────
+   6. (AN1) Cảm thấy an toàn khi sinh sống tại ký túc xá
+      □1  □2  □3  □4  □5
+   7. (AN2) Công tác bảo vệ được thực hiện nghiêm túc
+      □1  □2  □3  □4  □5
+   8. (AN3) Việc kiểm soát ra vào ký túc xá được thực hiện tốt
+      □1  □2  □3  □4  □5
+   9. (AN4) Ký túc xá có biện pháp bảo đảm an toàn PCCC
+      □1  □2  □3  □4  □5
+
+[HT] DỊCH VỤ HỖ TRỢ SINH VIÊN
+──────────────────────────────────────────────────
+  10. (HT1) Ban quản lý hỗ trợ sinh viên khi có yêu cầu
+      □1  □2  □3  □4  □5
+  11. (HT2) Các yêu cầu của sinh viên được xử lý kịp thời
+      □1  □2  □3  □4  □5
+  12. (HT3) Sinh viên dễ dàng liên hệ với Ban quản lý KTX
+      □1  □2  □3  □4  □5
+  13. (HT4) Thông tin liên quan đến KTX được cung cấp đầy đủ
+      □1  □2  □3  □4  □5
+
+[NV] NHÂN VIÊN QUẢN LÝ KÝ TÚC XÁ
+──────────────────────────────────────────────────
+  14. (NV1) Nhân viên quản lý có thái độ thân thiện
+      □1  □2  □3  □4  □5
+  15. (NV2) Nhân viên làm việc có trách nhiệm
+      □1  □2  □3  □4  □5
+  16. (NV3) Nhân viên có kỹ năng giao tiếp tốt
+      □1  □2  □3  □4  □5
+  17. (NV4) Nhân viên hỗ trợ sinh viên một cách tận tình
+      □1  □2  □3  □4  □5
+
+[CLDV] CHẤT LƯỢNG CẢM NHẬN DỊCH VỤ KTX
+──────────────────────────────────────────────────
+  18. (CLDV1) Chất lượng dịch vụ KTX đáp ứng nhu cầu của tôi
+      □1  □2  □3  □4  □5
+  19. (CLDV2) Dịch vụ KTX có chất lượng tốt
+      □1  □2  □3  □4  □5
+  20. (CLDV3) Dịch vụ KTX đáng tin cậy
+      □1  □2  □3  □4  □5
+  21. (CLDV4) Chất lượng dịch vụ KTX nhìn chung là tốt
+      □1  □2  □3  □4  □5
+
+[HL] SỰ HÀI LÒNG CỦA SINH VIÊN NỘI TRÚ
+──────────────────────────────────────────────────
+  22. (HL1) Hài lòng với điều kiện sống tại ký túc xá
+      □1  □2  □3  □4  □5
+  23. (HL2) KTX đáp ứng kỳ vọng ban đầu của tôi
+      □1  □2  □3  □4  □5
+  24. (HL3) Sẵn sàng tiếp tục sinh sống tại ký túc xá
+      □1  □2  □3  □4  □5
+  25. (HL4) Sẽ giới thiệu KTX cho sinh viên khác
+      □1  □2  □3  □4  □5
+
+─────────────────────────────────────────────────────────────────
+Ý kiến khác (nếu có):
+___________________________________________________________________
+___________________________________________________________________
+
+Xin chân thành cảm ơn sự hợp tác của Anh/Chị!
+═════════════════════════════════════════════════════════════════

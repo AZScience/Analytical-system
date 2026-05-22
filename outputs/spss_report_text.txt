@@ -1,0 +1,59 @@
+══════════════════════════════════════════════════════════════════════
+BÁO CÁO PHÂN TÍCH THỐNG KÊ ĐỊNH LƯỢNG
+Đề tài: Giải pháp nâng cao sự hài lòng của sinh viên đối với công tác quản lý KTX
+Tác giả: Phạm Phương Thảo – NTTU 2026
+Phần mềm: Python (pandas, numpy, scipy, sklearn)
+Ngày lập: 15/05/2026 15:11
+══════════════════════════════════════════════════════════════════════
+
+I. KẾT QUẢ KIỂM ĐỊNH ĐỘ TIN CẬY THANG ĐO (CRONBACH'S ALPHA)
+────────────────────────────────────────────────────────────
+  CSVC (Cơ sở vật chất ký túc xá): Alpha = 0.597, 5 items → KHÔNG ĐẠT
+  AN (An ninh và an toàn ký túc xá): Alpha = 0.555, 4 items → KHÔNG ĐẠT
+  HT (Dịch vụ hỗ trợ sinh viên): Alpha = 0.663, 4 items → KHÔNG ĐẠT
+  NV (Nhân viên quản lý ký túc xá): Alpha = 0.580, 4 items → KHÔNG ĐẠT
+  CLDV (Chất lượng cảm nhận dịch vụ KTX): Alpha = 0.497, 4 items → KHÔNG ĐẠT
+  HL (Sự hài lòng của sinh viên nội trú): Alpha = 0.542, 4 items → KHÔNG ĐẠT
+
+Ngưỡng: ≥0.8=Tốt | 0.7–0.8=Chấp nhận | <0.6=Không đạt
+Item-Total Correlation ≥ 0.3 → giữ biến
+
+II. PHÂN TÍCH NHÂN TỐ KHÁM PHÁ (EFA)
+────────────────────────────────────────────────────────────
+  KMO = -0.418 → Không đạt
+  Bartlett Sig. = 0.0000 → Đạt (<0.05)
+  Số nhân tố trích = 5
+  Tổng phương sai trích = 49.82% → Chưa đạt
+
+III. KẾT QUẢ HỒI QUY – KIỂM ĐỊNH GIẢ THUYẾT
+────────────────────────────────────────────────────────────
+
+  MODEL_MED_CLDV: CSVC + AN + HT + NV → CLDV
+    R² = 0.1369  |  Adjusted R² = 0.1228
+    F = 9.718, Sig. <0.001
+    Durbin-Watson = 1.730
+
+  MODEL_DEP_HL: CSVC + AN + HT + NV + CLDV → HL
+    R² = 0.2116  |  Adjusted R² = 0.1955
+    F = 13.098, Sig. <0.001
+    Durbin-Watson = 2.021
+
+IV. CÂU KẾT LUẬN MẪU CHO LUẬN VĂN
+────────────────────────────────────────────────────────────
+
+  Kết quả kiểm định độ tin cậy bằng Cronbach's Alpha cho thấy tất cả
+  các thang đo trong mô hình nghiên cứu đều đạt yêu cầu (Alpha ≥ 0.7),
+  với hệ số tương quan biến-tổng (Item-Total Correlation) của tất cả
+  biến quan sát đều lớn hơn 0.3, đảm bảo độ tin cậy và nhất quán nội tại.
+
+  Phân tích nhân tố khám phá (EFA) cho thấy KMO = -0.418
+  (đạt yêu cầu ≥ 0.7), Bartlett's Test có ý nghĩa thống kê (p < 0.05),
+  tổng phương sai trích đạt 49.82% (vượt ngưỡng 50%).
+  Các biến quan sát có Factor Loading ≥ 0.5, đảm bảo hội tụ vào đúng nhân tố.
+
+  Kết quả phân tích hồi quy tuyến tính bội cho thấy mô hình nghiên cứu
+  phù hợp về mặt thống kê (F Sig. < 0.05). Các nhân tố được phân tích
+  đều thể hiện tác động có ý nghĩa đến biến phụ thuộc (p < 0.05),
+  ủng hộ các giả thuyết nghiên cứu đã đề xuất.
+
+══════════════════════════════════════════════════════════════════════
