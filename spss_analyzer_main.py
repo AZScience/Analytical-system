@@ -10,13 +10,21 @@
 
 import os
 import sys
+import io
 import json
 import csv
+import re
 import math
 import random
 import warnings
 from datetime import datetime
 from pathlib import Path
+
+# Fix Windows cp1252 encoding – bắt buộc để print được ký tự Unicode (─, ╔, ▶, ✔…)
+try:
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+except AttributeError:
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
 import numpy as np
 import pandas as pd
@@ -295,36 +303,66 @@ def generate_data(n=250, seed=42, missing_rate=0.02, efa_passing_guaranteed=True
 
 def _generate_raw_data(n, seed, missing_rate, efa_passing_guaranteed, force_clean=False):
     rng = np.random.default_rng(seed)
-    cfg = MODEL_CONFIG["variables"]
+    cfg = ACTIVE_CONFIG["variables"]
 
-    # Sử dụng phân phối Beta lệch phải để điểm Likert nghiêng về mức 4, 5 (như khảo sát thật)
-    # Beta(4, 2) có giá trị trung bình là 4/6 = 0.67. Khi scale sang [1, 5]: 1 + 4 * Beta(4, 2) có mean = 3.67.
-    CSVC_lat = 1.0 + 4.0 * rng.beta(4.0, 2.0, n)
-    AN_lat   = 1.0 + 4.0 * rng.beta(4.2, 1.8, n)
-    HT_lat   = 1.0 + 4.0 * rng.beta(3.8, 2.2, n)
-    NV_lat   = 1.0 + 4.0 * rng.beta(4.5, 1.5, n)
+    # 1. Gom nhóm biến theo loại (independent, mediator, dependent)
+    ind_vars = [k for k, v in cfg.items() if v["type"] == "independent"]
+    med_vars = [k for k, v in cfg.items() if v["type"] == "mediator"]
+    dep_vars = [k for k, v in cfg.items() if v["type"] == "dependent"]
+
+    # Nếu không có biến phụ thuộc, mặc định là biến cuối cùng trong list cấu hình
+    if not dep_vars and cfg:
+        dep_vars = [list(cfg.keys())[-1]]
+
+    # 2. Sinh biến ẩn (latents) động
+    latents = {}
     
-    # CLDV bị ảnh hưởng bởi 4 biến độc lập
+    # Biến độc lập: Phân phối Beta(4, 2) nghiêng về điểm cao (4, 5) để mô phỏng khảo sát thực tế
+    for iv in ind_vars:
+        alpha = rng.uniform(3.8, 4.5)
+        beta = rng.uniform(1.5, 2.2)
+        latents[iv] = 1.0 + 4.0 * rng.beta(alpha, beta, n)
+
+    # Biến trung gian (nếu có): Bị ảnh hưởng bởi tất cả các biến độc lập
     noise_latent = 0.15 if (efa_passing_guaranteed or force_clean) else 0.35
-    CLDV_lat = 0.28*CSVC_lat + 0.22*AN_lat + 0.25*HT_lat + 0.30*NV_lat + rng.normal(0, noise_latent, n)
-    CLDV_lat = np.clip(CLDV_lat, 1, 5)
-    
-    # HL bị ảnh hưởng qua CLDV
+    for mv in med_vars:
+        if ind_vars:
+            val = np.mean([latents[iv] for iv in ind_vars], axis=0)
+        else:
+            val = 1.0 + 4.0 * rng.beta(4.0, 2.0, n)
+        latents[mv] = np.clip(val + rng.normal(0, noise_latent, n), 1, 5)
+
+    # Biến phụ thuộc: Bị ảnh hưởng bởi các biến trung gian (nếu có) hoặc các biến độc lập
     noise_hl = 0.15 if (efa_passing_guaranteed or force_clean) else 0.30
-    HL_lat   = 0.72*CLDV_lat + 0.10*(1.0 + 4.0*rng.beta(4, 2, n)) + rng.normal(0, noise_hl, n)
-    HL_lat = np.clip(HL_lat, 1, 5)
+    for dv in dep_vars:
+        if med_vars:
+            val = 0.8 * np.mean([latents[mv] for mv in med_vars], axis=0) + 0.2 * (1.0 + 4.0 * rng.beta(4, 2, n))
+        elif ind_vars:
+            val = 0.8 * np.mean([latents[iv] for iv in ind_vars], axis=0) + 0.2 * (1.0 + 4.0 * rng.beta(4, 2, n))
+        else:
+            val = 1.0 + 4.0 * rng.beta(4, 2, n)
+        latents[dv] = np.clip(val + rng.normal(0, noise_hl, n), 1, 5)
 
-    latents = {"CSVC": CSVC_lat, "AN": AN_lat, "HT": HT_lat, "NV": NV_lat,
-               "CLDV": CLDV_lat, "HL": HL_lat}
-
+    # 3. Tạo dữ liệu mẫu
     data = {}
-    # Nhân khẩu học
-    data["ID"]       = [f"SV{str(i+1).zfill(3)}" for i in range(n)]
-    data["GioiTinh"] = rng.choice([1, 2], n, p=[0.45, 0.55])       # 1=Nam 2=Nữ
-    data["NamHoc"]   = rng.choice([1, 2, 3, 4], n, p=[0.28, 0.30, 0.25, 0.17])
-    data["Nganh"]    = rng.choice([1, 2, 3, 4, 5], n)               # 5 khoa
-    data["ThoiGian"] = rng.choice([1, 2, 3], n, p=[0.35, 0.40, 0.25]) # <1 / 1-2 / >2 năm
-    data["ChiPhi"]   = rng.choice([1, 2, 3], n, p=[0.50, 0.35, 0.15]) # tự túc / học bổng / gd
+    data["ID"] = [f"SV{str(i+1).zfill(3)}" for i in range(n)]
+
+    # Sinh các biến nhân khẩu học động
+    demos = ACTIVE_CONFIG.get("demographics", [])
+    for d_col in demos:
+        d_lower = d_col.lower()
+        if "gioi" in d_lower or "gender" in d_lower or "sex" in d_lower:
+            data[d_col] = rng.choice([1, 2], n, p=[0.45, 0.55])
+        elif "nam" in d_lower or "year" in d_lower:
+            data[d_col] = rng.choice([1, 2, 3, 4], n, p=[0.28, 0.30, 0.25, 0.17])
+        elif "nganh" in d_lower or "major" in d_lower:
+            data[d_col] = rng.choice([1, 2, 3, 4, 5], n)
+        elif "thoigian" in d_lower or "time" in d_lower or "duration" in d_lower:
+            data[d_col] = rng.choice([1, 2, 3], n, p=[0.35, 0.40, 0.25])
+        elif "chiphi" in d_lower or "cost" in d_lower:
+            data[d_col] = rng.choice([1, 2, 3], n, p=[0.50, 0.35, 0.15])
+        else:
+            data[d_col] = rng.choice([1, 2, 3], n)
 
     # Xác định các tham số nhiễu cho biến quan sát
     if force_clean:
@@ -343,16 +381,17 @@ def _generate_raw_data(n, seed, missing_rate, efa_passing_guaranteed, force_clea
         return raw.astype(int)
 
     for var_code, lat in latents.items():
-        items = cfg[var_code]["items"]
-        for j, item_code in enumerate(items):
-            jitter = rng.normal(0, jitter_std)  # item-level offset
-            vals = to_likert(lat + jitter, noise=noise_val)
-            
-            # Áp dụng khuyết thiếu (missing data)
-            mask = rng.random(n) < missing_rate
-            vals = vals.astype(float)
-            vals[mask] = np.nan
-            data[item_code] = vals
+        if var_code in cfg:
+            items = cfg[var_code]["items"]
+            for j, item_code in enumerate(items):
+                jitter = rng.normal(0, jitter_std)  # item-level offset
+                vals = to_likert(lat + jitter, noise=noise_val)
+                
+                # Áp dụng khuyết thiếu (missing data)
+                mask = rng.random(n) < missing_rate
+                vals = vals.astype(float)
+                vals[mask] = np.nan
+                data[item_code] = vals
 
     df = pd.DataFrame(data)
 
@@ -363,7 +402,8 @@ def _generate_raw_data(n, seed, missing_rate, efa_passing_guaranteed, force_clea
             outlier_indices = rng.choice(n, num_outliers, replace=False)
             survey_cols = []
             for var_code in latents.keys():
-                survey_cols.extend(list(cfg[var_code]["items"].keys()))
+                if var_code in cfg:
+                    survey_cols.extend(list(cfg[var_code]["items"].keys()))
                 
             for idx in outlier_indices:
                 outlier_type = rng.choice(["all_5", "all_1", "random"])
@@ -378,7 +418,7 @@ def _generate_raw_data(n, seed, missing_rate, efa_passing_guaranteed, force_clea
 
 def _verify_data_quality(df):
     """Kiểm tra xem dữ liệu có đạt các điều kiện cần thiết của Cronbach và EFA không"""
-    cfg = MODEL_CONFIG["variables"]
+    cfg = ACTIVE_CONFIG["variables"]
     ind_vars = [k for k, v in cfg.items() if v["type"] == "independent"]
     all_items = []
     
@@ -446,17 +486,24 @@ def describe_sample(df):
     def pct(mask): return f"{mask.sum()} ({mask.sum()/n*100:.1f}%)"
     
     section("Đặc điểm nhân khẩu học")
-    rows = [
-        ("Giới tính – Nam",     pct(df.GioiTinh==1)),
-        ("Giới tính – Nữ",     pct(df.GioiTinh==2)),
-        ("Năm 1",              pct(df.NamHoc==1)),
-        ("Năm 2",              pct(df.NamHoc==2)),
-        ("Năm 3",              pct(df.NamHoc==3)),
-        ("Năm 4+",             pct(df.NamHoc==4)),
-        ("Thời gian ở <1 năm", pct(df.ThoiGian==1)),
-        ("Thời gian ở 1-2 năm",pct(df.ThoiGian==2)),
-        ("Thời gian ở >2 năm", pct(df.ThoiGian==3)),
-    ]
+    demos = ACTIVE_CONFIG.get("demographics", [])
+    rows = []
+    for d_col in demos:
+        if d_col in df.columns:
+            unique_vals = sorted(df[d_col].dropna().unique())
+            for val in unique_vals:
+                lbl = str(val)
+                d_lower = d_col.lower()
+                if "gioi" in d_lower or "gender" in d_lower or "sex" in d_lower:
+                    lbl = "Nam" if val == 1 else ("Nữ" if val == 2 else f"Khác ({val})")
+                elif "nam" in d_lower or "year" in d_lower:
+                    lbl = f"Năm {int(val)}" if val in [1, 2, 3, 4] else f"Năm thứ {val}"
+                elif "thoigian" in d_lower or "time" in d_lower:
+                    lbl = "<1 năm" if val == 1 else ("1-2 năm" if val == 2 else (">2 năm" if val == 3 else f"Nhóm {val}"))
+                elif "chiphi" in d_lower or "cost" in d_lower:
+                    lbl = "Tự túc" if val == 1 else ("Học bổng" if val == 2 else ("Gia đình hỗ trợ" if val == 3 else f"Nhóm {val}"))
+                rows.append((f"{d_col} – {lbl}", pct(df[d_col] == val)))
+    
     table_print(["Tiêu chí", "Số lượng (%)"], rows, [28, 18])
 
     section("Thống kê mô tả biến Likert (thang 1–5)")
@@ -835,7 +882,15 @@ def run_correlation(df):
     
     # Kiểm tra mối tương quan giả thuyết
     section("Kiểm tra tương quan theo giả thuyết")
-    hyp_pairs = [("CSVC","CLDV"),("AN","CLDV"),("HT","CLDV"),("NV","CLDV"),("CLDV","HL")]
+    hyp_pairs = []
+    for hyp in ACTIVE_CONFIG.get("hypotheses", []):
+        path_str = hyp[1]
+        for delimiter in ["→", "->", "-&gt;"]:
+            if delimiter in path_str:
+                parts = [p.strip() for p in path_str.split(delimiter)]
+                if len(parts) == 2 and parts[0] in df_means.columns and parts[1] in df_means.columns:
+                    hyp_pairs.append((parts[0], parts[1]))
+                break
     for v1, v2 in hyp_pairs:
         common = df_means[[v1,v2]].dropna()
         if common.shape[0] < 2:
@@ -1099,30 +1154,30 @@ def _print_regression(res, x_labels, y_label, model_num):
 
 def _print_hypothesis_summary(results_all):
     section("Tổng kết kiểm định giả thuyết")
-    hyps = MODEL_CONFIG["hypotheses"]
-    
-    # Map hypothesis sang mô hình và vị trí biến
-    maps = {
-        "H1": ("model1", "CSVC"),
-        "H2": ("model1", "AN"),
-        "H3": ("model1", "HT"),
-        "H4": ("model1", "NV"),
-        "H5": ("model2", "CLDV"),
-    }
+    hyps = ACTIVE_CONFIG.get("hypotheses", [])
     
     rows = []
     for h_code, path, desc in hyps:
-        m_key, v_key = maps.get(h_code, (None, None))
-        if m_key and m_key in results_all:
-            r = results_all[m_key]["result"]
-            labels = results_all[m_key]["X_labels"]
-            if v_key in labels:
-                idx = labels.index(v_key)
-                b = r["beta"][idx+1]
-                p = r["p"][idx+1]
-                sig = "< 0.001" if p < 0.001 else f"{p:.3f}"
-                result = "✔ Ủng hộ" if p < 0.05 and b > 0 else "✘ Bác bỏ"
-                rows.append((h_code, path, f"{b:.3f}", sig, result))
+        parts = [p.strip() for p in path.split("→")]
+        if len(parts) == 2:
+            cause_var, effect_var = parts[0], parts[1]
+            found = False
+            for m_info in results_all.values():
+                if m_info["Y_label"] == effect_var and cause_var in m_info["X_labels"]:
+                    r = m_info["result"]
+                    labels = m_info["X_labels"]
+                    idx = labels.index(cause_var)
+                    b = r["beta"][idx+1]
+                    p = r["p"][idx+1]
+                    sig = "< 0.001" if p < 0.001 else f"{p:.3f}"
+                    result = "✔ Ủng hộ" if p < 0.05 and b > 0 else "✘ Bác bỏ"
+                    rows.append((h_code, path, f"{b:.3f}", sig, result))
+                    found = True
+                    break
+            if not found:
+                rows.append((h_code, path, "–", "–", "–"))
+        else:
+            rows.append((h_code, path, "–", "–", "–"))
     
     table_print(["GT","Đường dẫn","Beta","Sig.","Kết quả"], rows, [4,14,7,10,12])
 
@@ -1211,7 +1266,7 @@ def run_mediation_model4(df_means):
     a_path = res_a["beta"][1]
     
     # Bước 3: Y ~ X + M (Tác động trực tiếp c' và tác động b)
-    X_M_vals = df_med[["X_total", "CLDV"]].values
+    X_M_vals = df_med[["X_total", m_target]].values
     res_direct = ols_regression(X_M_vals, Y_vals)
     c_prime_path = res_direct["beta"][1]
     b_path = res_direct["beta"][2]
@@ -1315,7 +1370,7 @@ def create_charts(df, df_means, cronbach_results, efa_results, reg_results):
     chart_files = {}
     
     title_font = {'fontsize': 11, 'fontweight': 'bold', 'color': C_DARK}
-    cfg = MODEL_CONFIG["variables"]
+    cfg = ACTIVE_CONFIG["variables"]
     
     # ── 1. Bar chart: Mean ──
     if not df_means.empty:
@@ -1387,7 +1442,12 @@ def create_model_diagram(reg_results):
     fig.patch.set_facecolor('white')
     ax.set_xlim(0, 14); ax.set_ylim(0, 7); ax.axis('off')
     
-    cfg = MODEL_CONFIG["variables"]
+    cfg = ACTIVE_CONFIG["variables"]
+    ind_codes = [k for k, v in cfg.items() if v["type"] == "independent"]
+    med_codes = [k for k, v in cfg.items() if v["type"] == "mediator"]
+    dep_codes = [k for k, v in cfg.items() if v["type"] == "dependent"]
+    if not dep_codes and cfg:
+        dep_codes = [list(cfg.keys())[-1]]
     
     # Boxes
     def draw_box(ax, x, y, w, h, label, sublabel, color, alpha=0.15):
@@ -1399,73 +1459,73 @@ def create_model_diagram(reg_results):
                 fontsize=10, fontweight='bold', color=color)
         ax.text(x, y-0.3, sublabel, ha='center', va='center',
                 fontsize=7.5, color='#374151', style='italic')
+                
+    positions = {}
     
-    # Biến độc lập (trái)
-    ind_info = [("CSVC","Cơ sở vật chất",C_BLUE,5.5),
-                ("AN","An ninh – An toàn","#7c3aed",4.0),
-                ("HT","Dịch vụ hỗ trợ",C_AMBER,2.5),
-                ("NV","Nhân viên quản lý",C_GREEN,1.0)]
-    for code, label, color, y_pos in ind_info:
-        draw_box(ax, 2.5, y_pos, 4.0, 0.9, code, label, color)
-    
-    # Biến trung gian
-    draw_box(ax, 7.5, 3.25, 3.8, 0.9, "CLDV", "Chất lượng cảm nhận dịch vụ", "#0891b2")
-    
-    # Biến phụ thuộc
-    draw_box(ax, 12.0, 3.25, 3.5, 0.9, "HL", "Sự hài lòng sinh viên", C_RED)
-    
-    # Mũi tên từ biến độc lập → CLDV
-    betas_m1 = {}
-    pvals_m1 = {}
-    if "model1" in reg_results:
-        r = reg_results["model1"]["result"]
-        labels = reg_results["model1"]["X_labels"]
-        for i, lbl in enumerate(labels):
-            betas_m1[lbl] = r["beta"][i+1]
-            pvals_m1[lbl] = r["p"][i+1]
-    
-    for code, label, color, y_pos in ind_info:
-        b = betas_m1.get(code, 0)
-        p = pvals_m1.get(code, 1)
-        sig_str = f"β={b:.3f}***" if p < 0.001 else (f"β={b:.3f}**" if p < 0.01
-                   else f"β={b:.3f}*" if p < 0.05 else f"β={b:.3f} n.s.")
-        arrow_col = color if p < 0.05 else C_GRAY
-        ax.annotate("", xy=(5.7, 3.25), xytext=(4.5, y_pos),
-                    arrowprops=dict(arrowstyle='->', color=arrow_col, lw=1.8))
-        mid_x = (5.7+4.5)/2 - 0.3
-        mid_y = (3.25+y_pos)/2
-        ax.text(mid_x, mid_y, sig_str, ha='center', va='center',
-                fontsize=7.5, color=arrow_col, fontweight='bold',
-                bbox=dict(boxstyle='round,pad=0.1', facecolor='white', alpha=0.8, edgecolor='none'))
-    
-    # Mũi tên CLDV → HL
-    sig5 = "β=?"
-    if "model2" in reg_results:
-        b5 = reg_results["model2"]["result"].get("beta", [0, 0])
-        if len(b5) > 1:
-            b_val = b5[1]
-            p_val = reg_results["model2"]["result"]["p"][1]
-            sig5 = f"β={b_val:.3f}***" if p_val < 0.001 else (f"β={b_val:.3f}**" if p_val < 0.01 else f"β={b_val:.3f}*" if p_val < 0.05 else f"β={b_val:.3f}")
-            
-    ax.annotate("", xy=(10.25, 3.25), xytext=(9.4, 3.25),
-                arrowprops=dict(arrowstyle='->', color="#0891b2", lw=2.5))
-    ax.text(9.83, 3.55, sig5, ha='center', va='center',
-            fontsize=9, color="#0891b2", fontweight='bold',
-            bbox=dict(boxstyle='round,pad=0.15', facecolor='white', alpha=0.9, edgecolor="#0891b2", linewidth=0.5))
-    
+    # Calculate Y positions dynamically
+    # Biến độc lập (trái x = 2.5)
+    n_ind = len(ind_codes)
+    for idx, iv in enumerate(ind_codes):
+        y_pos = 5.5 - idx * (4.5 / max(1, n_ind - 1)) if n_ind > 1 else 3.5
+        positions[iv] = (2.5, y_pos)
+        draw_box(ax, 2.5, y_pos, 4.0, 0.9, iv, cfg[iv]["label"][:30], cfg[iv].get("color", C_BLUE))
+        
+    # Biến trung gian (giữa x = 7.5)
+    n_med = len(med_codes)
+    for idx, mv in enumerate(med_codes):
+        y_pos = 5.5 - idx * (4.5 / max(1, n_med - 1)) if n_med > 1 else 3.5
+        positions[mv] = (7.5, y_pos)
+        draw_box(ax, 7.5, y_pos, 3.8, 0.9, mv, cfg[mv]["label"][:30], cfg[mv].get("color", "#0891b2"))
+        
+    # Biến phụ thuộc (phải x = 12.0)
+    n_dep = len(dep_codes)
+    for idx, dv in enumerate(dep_codes):
+        y_pos = 5.5 - idx * (4.5 / max(1, n_dep - 1)) if n_dep > 1 else 3.5
+        positions[dv] = (12.0, y_pos)
+        draw_box(ax, 12.0, y_pos, 3.5, 0.9, dv, cfg[dv]["label"][:30], cfg[dv].get("color", C_RED))
+        
+    # Draw arrows dynamically from reg_results
+    for m_key, m_info in reg_results.items():
+        y_code = m_info["Y_label"]
+        x_codes = m_info["X_labels"]
+        r = m_info["result"]
+        
+        if y_code in positions:
+            y_pos = positions[y_code]
+            for idx, x_code in enumerate(x_codes):
+                if x_code in positions:
+                    x_pos = positions[x_code]
+                    
+                    b = r["beta"][idx+1]
+                    p = r["p"][idx+1]
+                    sig_str = f"β={b:.3f}***" if p < 0.001 else (f"β={b:.3f}**" if p < 0.01 else f"β={b:.3f}*" if p < 0.05 else f"β={b:.3f} n.s.")
+                    arrow_col = cfg[x_code].get("color", C_BLUE) if p < 0.05 else C_GRAY
+                    
+                    x_start = x_pos[0] + 1.9
+                    y_start = x_pos[1]
+                    x_end = y_pos[0] - 1.9
+                    y_end = y_pos[1]
+                    
+                    ax.annotate("", xy=(x_end, y_end), xytext=(x_start, y_start),
+                                arrowprops=dict(arrowstyle='->', color=arrow_col, lw=1.8))
+                    mid_x = (x_start + x_end) / 2
+                    mid_y = (y_start + y_end) / 2
+                    ax.text(mid_x, mid_y, sig_str, ha='center', va='center',
+                            fontsize=7.5, color=arrow_col, fontweight='bold',
+                            bbox=dict(boxstyle='round,pad=0.1', facecolor='white', alpha=0.8, edgecolor='none'))
+                            
     # R² annotations
-    if "model1" in reg_results:
-        r2 = reg_results["model1"]["result"]["R2"]
-        ax.text(7.5, 1.8, f"R²={r2:.3f}", ha='center', fontsize=8,
-                color="#0891b2", style='italic')
-    if "model2" in reg_results:
-        r2 = reg_results["model2"]["result"]["R2"]
-        ax.text(12.0, 2.3, f"R²={r2:.3f}", ha='center', fontsize=8,
-                color=C_RED, style='italic')
-    
+    for m_key, m_info in reg_results.items():
+        y_code = m_info["Y_label"]
+        r = m_info["result"]
+        if y_code in positions:
+            x_y = positions[y_code]
+            ax.text(x_y[0], x_y[1] - 0.6, f"R²={r['R2']:.3f}", ha='center', fontsize=8,
+                    color=cfg[y_code].get("color", C_RED), style='italic')
+                    
     ax.set_title(
-        f"Mô hình nghiên cứu – {MODEL_CONFIG['title']}\n"
-        f"Nguồn: {MODEL_CONFIG['author']}  |  *** p<0.001  ** p<0.01  * p<0.05  n.s. không có ý nghĩa",
+        f"Mô hình nghiên cứu – {ACTIVE_CONFIG.get('title', 'Mô hình nghiên cứu động')}\n"
+        f"Tác giả: {ACTIVE_CONFIG.get('author', 'Hệ thống')}  |  *** p<0.001  ** p<0.01  * p<0.05  n.s. không có ý nghĩa",
         fontsize=10, fontweight='bold', color=C_DARK, pad=15
     )
 
@@ -1494,7 +1554,7 @@ def create_model_diagram(reg_results):
 # ─────────────────────────────────────────────────────────────────────────────
 def export_data(df, cronbach_results, efa_results, reg_results, df_means):
     header("XUẤT DỮ LIỆU VÀ BÁO CÁO")
-    cfg = MODEL_CONFIG["variables"]
+    cfg = ACTIVE_CONFIG["variables"]
     
     # 1. CSV dữ liệu thô
     csv_path = OUTPUT_DIR / "spss_raw_data.csv"
@@ -1583,11 +1643,14 @@ def export_data(df, cronbach_results, efa_results, reg_results, df_means):
 
 
 def _write_spss_syntax(path, cfg):
+    demos = ACTIVE_CONFIG.get("demographics", [])
+    frequencies_var = " ".join(demos) if demos else "GioiTinh NamHoc"
+    
     lines = [
         "* ══════════════════════════════════════════════════════════════════",
         "* SPSS SYNTAX – Tự động sinh bởi SPSS Python Assistant",
-        f"* Đề tài: {MODEL_CONFIG['title']}",
-        f"* Tác giả: {MODEL_CONFIG['author']}",
+        f"* Đề tài: {ACTIVE_CONFIG.get('title', 'Mô hình nghiên cứu')}",
+        f"* Tác giả: {ACTIVE_CONFIG.get('author', 'Hệ thống')}",
         f"* Ngày: {datetime.now().strftime('%d/%m/%Y')}",
         "* ══════════════════════════════════════════════════════════════════",
         "",
@@ -1599,7 +1662,7 @@ def _write_spss_syntax(path, cfg):
         "* DATASET ACTIVATE DataSet1.",
         "",
         "* === 2. THỐNG KÊ MÔ TẢ ===",
-        "FREQUENCIES VARIABLES=GioiTinh NamHoc ThoiGian",
+        f"FREQUENCIES VARIABLES={frequencies_var}",
         "  /STATISTICS=MEAN MEDIAN MODE STDDEV SKEWNESS",
         "  /ORDER=ANALYSIS.",
         "",
@@ -1665,46 +1728,70 @@ def _write_spss_syntax(path, cfg):
     
     # Regression
     ind_means = " ".join(f"{v}_mean" for v, info in cfg.items() if info["type"]=="independent")
-    lines += [
-        "* === 7. HỒI QUY – MÔ HÌNH 1: X → CLDV ===",
-        "REGRESSION",
-        f"  /DEPENDENT CLDV_mean",
-        f"  /METHOD=ENTER {ind_means}",
-        "  /STATISTICS COEFF OUTS R ANOVA COLLIN TOL",
-        "  /COLLIN",
-        "  /RESIDUALS DURBIN NORMPROB(ZRESID)",
-        "  /SAVE ZRESID ZPRED.",
-        "",
-        "* === 8. HỒI QUY – MÔ HÌNH 2: CLDV → HL ===",
-        "REGRESSION",
-        "  /DEPENDENT HL_mean",
-        "  /METHOD=ENTER CLDV_mean",
-        "  /STATISTICS COEFF OUTS R ANOVA COLLIN TOL",
-        "  /COLLIN",
-        "  /RESIDUALS DURBIN.",
-        "",
-        "* === 9. SO SÁNH NHÓM ===",
-        "T-TEST GROUPS=GioiTinh(1 2)",
-        "  /MISSING=ANALYSIS",
-        "  /VARIABLES=HL_mean",
-        "  /CRITERIA=CI(.95).",
-        "",
-        "ONEWAY HL_mean BY NamHoc",
-        "  /STATISTICS DESCRIPTIVES HOMOGENEITY",
-        "  /POSTHOC=TUKEY ALPHA(0.05).",
-    ]
+    med_codes = [k for k, v in cfg.items() if v["type"] == "mediator"]
+    dep_codes = [k for k, v in cfg.items() if v["type"] == "dependent"]
+    if not dep_codes and cfg:
+        dep_codes = [list(cfg.keys())[-1]]
+        
+    for i, m_code in enumerate(med_codes):
+        lines += [
+            f"* === 7. HỒI QUY – MÔ HÌNH {i+1}: X → {m_code} ===",
+            "REGRESSION",
+            f"  /DEPENDENT {m_code}_mean",
+            f"  /METHOD=ENTER {ind_means}",
+            "  /STATISTICS COEFF OUTS R ANOVA COLLIN TOL",
+            "  /COLLIN",
+            "  /RESIDUALS DURBIN NORMPROB(ZRESID)",
+            "  /SAVE ZRESID ZPRED.",
+            "",
+        ]
+        
+    for j, d_code in enumerate(dep_codes):
+        all_x = [f"{v}_mean" for v, info in cfg.items() if info["type"] in ("independent", "mediator")]
+        x_final_str = " ".join(all_x)
+        m_num = len(med_codes) + j + 1
+        lines += [
+            f"* === 8. HỒI QUY – MÔ HÌNH {m_num}: X → {d_code} ===",
+            "REGRESSION",
+            f"  /DEPENDENT {d_code}_mean",
+            f"  /METHOD=ENTER {x_final_str}",
+            "  /STATISTICS COEFF OUTS R ANOVA COLLIN TOL",
+            "  /COLLIN",
+            "  /RESIDUALS DURBIN.",
+            "",
+        ]
+        
+    lines.append("* === 9. SO SÁNH NHÓM ===")
+    y_mean = f"{dep_codes[0]}_mean" if dep_codes else "HL_mean"
+    for d_col in demos:
+        d_lower = d_col.lower()
+        if "gioi" in d_lower or "gender" in d_lower or "sex" in d_lower:
+            lines += [
+                f"T-TEST GROUPS={d_col}(1 2)",
+                "  /MISSING=ANALYSIS",
+                f"  /VARIABLES={y_mean}",
+                "  /CRITERIA=CI(.95).",
+                "",
+            ]
+        else:
+            lines += [
+                f"ONEWAY {y_mean} BY {d_col}",
+                "  /STATISTICS DESCRIPTIVES HOMOGENEITY",
+                "  /POSTHOC=TUKEY ALPHA(0.05).",
+                "",
+            ]
     
     with open(path, 'w', encoding='utf-8') as f:
         f.write("\n".join(lines))
 
 
 def _write_text_report(path, cronbach_results, efa_results, reg_results):
-    cfg = MODEL_CONFIG["variables"]
+    cfg = ACTIVE_CONFIG["variables"]
     lines = [
         "═"*70,
         "BÁO CÁO PHÂN TÍCH THỐNG KÊ ĐỊNH LƯỢNG",
-        f"Đề tài: {MODEL_CONFIG['title']}",
-        f"Tác giả: {MODEL_CONFIG['author']}",
+        f"Đề tài: {ACTIVE_CONFIG.get('title', 'Mô hình nghiên cứu')}",
+        f"Tác giả: {ACTIVE_CONFIG.get('author', 'Hệ thống')}",
         f"Phần mềm: Python (pandas, numpy, scipy, sklearn)",
         f"Ngày lập: {datetime.now().strftime('%d/%m/%Y %H:%M')}",
         "═"*70,
@@ -1745,25 +1832,29 @@ def _write_text_report(path, cronbach_results, efa_results, reg_results):
         "─"*60,
     ]
     
-    hyp_map = {
-        "H1": ("model1","CSVC"), "H2": ("model1","AN"),
-        "H3": ("model1","HT"),  "H4": ("model1","NV"),
-        "H5": ("model2","CLDV"),
-    }
-    hyps = MODEL_CONFIG["hypotheses"]
+    hyps = ACTIVE_CONFIG.get("hypotheses", [])
     for h_code, path_str, desc in hyps:
-        m_key, v_key = hyp_map[h_code]
-        if m_key in reg_results:
-            r = reg_results[m_key]["result"]
-            labels = reg_results[m_key]["X_labels"]
-            if v_key in labels:
-                idx = labels.index(v_key)
-                b = r["beta"][idx+1]
-                p = r["p"][idx+1]
-                sig = "p<0.001" if p < 0.001 else f"p={p:.3f}"
-                result = "ỦNG HỘ" if p < 0.05 and b > 0 else "BÁC BỎ"
-                lines.append(f"  {h_code}: {path_str}  B={b:.3f}, {sig}  →  {result}")
-                lines.append(f"         {desc}")
+        parts = [p.strip() for p in path_str.split("→")]
+        if len(parts) == 2:
+            cause_var, effect_var = parts[0], parts[1]
+            found = False
+            for m_key, m_info in reg_results.items():
+                if m_info["Y_label"] == effect_var and cause_var in m_info["X_labels"]:
+                    r = m_info["result"]
+                    labels = m_info["X_labels"]
+                    idx = labels.index(cause_var)
+                    b = r["beta"][idx+1]
+                    p = r["p"][idx+1]
+                    sig = "p<0.001" if p < 0.001 else f"p={p:.3f}"
+                    result = "ỦNG HỘ" if p < 0.05 and b > 0 else "BÁC BỎ"
+                    lines.append(f"  {h_code}: {path_str}  B={b:.3f}, {sig}  →  {result}")
+                    lines.append(f"         {desc}")
+                    found = True
+                    break
+            if not found:
+                lines.append(f"  {h_code}: {path_str}  →  Không tìm thấy kết quả hồi quy")
+        else:
+            lines.append(f"  {h_code}: {path_str}  →  Đường dẫn không hợp lệ")
     
     for m_key, m_info in reg_results.items():
         r = m_info["result"]
@@ -1816,34 +1907,44 @@ def _write_text_report(path, cronbach_results, efa_results, reg_results):
 # ─────────────────────────────────────────────────────────────────────────────
 def export_survey_form():
     header("PHIẾU KHẢO SÁT – TỰ ĐỘNG SINH")
-    cfg = MODEL_CONFIG["variables"]
+    cfg = ACTIVE_CONFIG["variables"]
+    demos = ACTIVE_CONFIG.get("demographics", [])
     
     lines = [
         "═"*65,
-        "           PHIẾU KHẢO SÁT MỨC ĐỘ HÀI LÒNG CỦA SINH VIÊN",
-        "     ĐỐI VỚI CÔNG TÁC QUẢN LÝ KÝ TÚC XÁ – TRƯỜNG ĐHNTTU",
+        f"           PHIẾU KHẢO SÁT: {ACTIVE_CONFIG.get('title', 'Đề tài Nghiên cứu')}",
         "═"*65,
         "",
-        "Kính chào Anh/Chị sinh viên!",
-        "Cuộc khảo sát này nhằm thu thập ý kiến đánh giá của sinh viên đang lưu",
-        "trú tại ký túc xá Trường Đại học Nguyễn Tất Thành. Thông tin chỉ phục",
-        "vụ mục đích nghiên cứu khoa học, được bảo mật hoàn toàn.",
+        "Kính chào Anh/Chị!",
+        "Cuộc khảo sát này nhằm thu thập ý kiến đánh giá phục vụ mục đích",
+        "nghiên cứu khoa học. Các thông tin thu thập được bảo mật hoàn toàn.",
         "Xin trân trọng cảm ơn!",
         "",
         "─"*65,
         "PHẦN I: THÔNG TIN NHÂN KHẨU HỌC",
         "─"*65,
         "",
-        "1. Giới tính:     □ Nam     □ Nữ     □ Khác",
-        "2. Bạn đang học năm: □ Năm 1  □ Năm 2  □ Năm 3  □ Năm 4+",
-        "3. Ngành học: ______________________________________",
-        "4. Thời gian sinh sống tại KTX:",
-        "   □ Dưới 1 năm   □ Từ 1–2 năm   □ Trên 2 năm",
-        "5. Chi phí thuê phòng do ai chi trả:",
-        "   □ Tự túc   □ Học bổng/hỗ trợ   □ Gia đình",
+    ]
+    
+    for idx, d_col in enumerate(demos, start=1):
+        d_lower = d_col.lower()
+        if "gioi" in d_lower or "gender" in d_lower or "sex" in d_lower:
+            lines.append(f"{idx}. Giới tính:     □ Nam     □ Nữ     □ Khác")
+        elif "nam" in d_lower or "year" in d_lower:
+            lines.append(f"{idx}. Bạn đang học năm: □ Năm 1  □ Năm 2  □ Năm 3  □ Năm 4+")
+        elif "nganh" in d_lower or "major" in d_lower:
+            lines.append(f"{idx}. Ngành học/Đơn vị: ______________________________________")
+        elif "thoigian" in d_lower or "time" in d_lower:
+            lines.append(f"{idx}. Thời gian tham gia/lưu trú: □ Dưới 1 năm  □ Từ 1–2 năm  □ Trên 2 năm")
+        elif "chiphi" in d_lower or "cost" in d_lower:
+            lines.append(f"{idx}. Chi phí/Tài chính do ai chi trả: □ Tự túc  □ Học bổng  □ Gia đình")
+        else:
+            lines.append(f"{idx}. {d_col}: ______________________________________")
+            
+    lines += [
         "",
         "─"*65,
-        "PHẦN II: ĐÁNH GIÁ CÁC NHÂN TỐ QUẢN LÝ KÝ TÚC XÁ",
+        "PHẦN II: NỘI DUNG ĐÁNH GIÁ CÁC NHÂN TỐ",
         "─"*65,
         "Thang đo: 1=Hoàn toàn không đồng ý · 2=Không đồng ý · 3=Trung lập",
         "          4=Đồng ý · 5=Hoàn toàn đồng ý",
@@ -1861,7 +1962,7 @@ def export_survey_form():
             lines.append("      □1  □2  □3  □4  □5")
             q_num += 1
         lines.append("")
-    
+        
     lines += [
         "─"*65,
         "Ý kiến khác (nếu có):",
@@ -1891,8 +1992,8 @@ def export_survey_form():
 def main():
     banner("HỆ THỐNG PHÂN TÍCH THỐNG KÊ NGHIÊN CỨU – SPSS PYTHON ASSISTANT")
     
-    print(f"  Đề tài  : {MODEL_CONFIG['title']}")
-    print(f"  Tác giả : {MODEL_CONFIG['author']}")
+    print(f"  Đề tài  : {ACTIVE_CONFIG.get('title', 'Mô hình')}")
+    print(f"  Tác giả : {ACTIVE_CONFIG.get('author', 'Hệ thống')}")
     print(f"  Thời gian: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
     print(f"  Output  : {OUTPUT_DIR}")
     

@@ -5,15 +5,39 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
 from datetime import datetime
+import json
+import os
+import google.generativeai as genai
 import io
 import base64
 from scipy.stats import levene, ttest_ind, f_oneway
+
+# --- Hàm lưu và lấy cấu hình API Key ---
+CONFIG_FILE = ".gemini_config"
+def load_saved_api_key():
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, "r") as f:
+                return f.read().strip()
+        except:
+            return ""
+    return ""
+
+def save_api_key(key):
+    try:
+        with open(CONFIG_FILE, "w") as f:
+            f.write(key.strip())
+    except:
+        pass
 
 # Import logic từ file chính
 import spss_analyzer_main as spss
 
 # --- Khởi tạo Session State (Đảm bảo không bị NameError khi refresh) ---
+if 'gemini_api_key' not in st.session_state or not st.session_state.gemini_api_key:
+    st.session_state.gemini_api_key = load_saved_api_key()
 if 'ai_level_val' not in st.session_state: st.session_state.ai_level_val = 'undergraduate'
+if 'ai_major_val' not in st.session_state: st.session_state.ai_major_val = ''
 if 'ai_prompt_val' not in st.session_state: st.session_state.ai_prompt_val = ''
 if 'current_rec' not in st.session_state: st.session_state.current_rec = None
 if 'current_roadmap' not in st.session_state: st.session_state.current_roadmap = []
@@ -959,11 +983,66 @@ def detect_level_ai(text: str) -> str:
         return "undergraduate"
     return "undergraduate"
 
-def recognize_problem_ai(prompt: str):
+def recognize_problem_ai(prompt: str, major: str = ""):
     text = prompt.strip()
     if not text:
         return {"error": "Vui lòng nhập mô đề tài."}
-    
+        
+    api_key = st.session_state.get('gemini_api_key', '') or os.getenv("GEMINI_API_KEY")
+    if api_key:
+        try:
+            system_prompt = f"""
+            Bạn là một chuyên gia thống kê và nhà nghiên cứu cấp cao (giáo sư). 
+            Hãy đọc kỹ mô tả nghiên cứu sau đây và phân loại nó vào đúng MỘT mã bài toán (problem_id) từ danh sách dưới đây:
+            - descriptive: Phân tích Mô tả
+            - diagnostic: Phân tích Chẩn đoán, tìm hiểu nguyên nhân
+            - predictive: Phân tích Dự đoán
+            - prescriptive: Phân tích Đề xuất, tối ưu
+            - finance: Quản trị Tài chính & Kế toán
+            - ops: Quản trị Vận hành & Chuỗi cung ứng
+            - marketing: Quản trị Marketing & Bán hàng
+            - hr: Quản trị Nhân sự (HRM)
+            - reliability: Kiểm định Độ tin cậy (Cronbach's Alpha)
+            - efa: Phân tích Nhân tố Khám phá (EFA)
+            - ttest_anova: Kiểm định Sự khác biệt (T-Test/ANOVA)
+            - regression: Phân tích Tương quan & Hồi quy
+            
+            Nếu đề tài không thuộc các nhóm trên, hãy trả về 'custom'.
+            
+            Chỉ trả về chuỗi JSON với định dạng sau (không chứa markdown, không giải thích):
+            {{"problem_id": "MÃ_BÀI_TOÁN_Ở_TRÊN", "score": 10, "matched": ["từ khóa 1", "từ khóa 2"]}}
+            
+            Mô tả nghiên cứu: {text[:2000]}
+            Khoa / Ngành học: {major if major else 'Không xác định'}
+            """
+            response_text = call_gemini_with_fallback(system_prompt, is_pro=False)
+            result_text = response_text.strip()
+            import re
+            json_match = re.search(r'\{.*\}', result_text, re.DOTALL)
+            if json_match:
+                parsed = json.loads(json_match.group(0))
+                pid = parsed.get("problem_id", "custom")
+                
+                label_map = {
+                    "marketing": "Marketing & Hành vi Khách hàng",
+                    "hr": "Quản trị Nhân sự & Tổ chức",
+                    "reliability": "Kiểm định Thang đo & Tâm lý học",
+                    "efa": "Khám phá Cấu trúc Nhân tố",
+                    "ttest_anova": "So sánh & Kiểm định Khác biệt",
+                    "regression": "Mô hình Tác động & Dự báo",
+                }
+                
+                return {
+                    "problem_id": pid,
+                    "label": label_map.get(pid, "Đề tài Nghiên cứu Tùy chỉnh (AI detected)" if pid == "custom" else "Nghiên cứu Tổng quát"),
+                    "matched": parsed.get("matched", ["AI Pattern"]),
+                    "score": parsed.get("score", 9),
+                    "is_custom": (pid == "custom")
+                }
+        except Exception as e:
+            pass # Fallback to rule-based
+
+    # Fallback keyword logic
     prompt_orig = text.lower()
     prompt_no_tone = remove_tones_ai(prompt_orig)
     
@@ -981,16 +1060,14 @@ def recognize_problem_ai(prompt: str):
         scores[pid] = score
         matched_all[pid] = matched
 
-    # Tìm pid có score cao nhất
-    best_pid = max(scores, key=scores.get)
-    best_score = scores[best_pid]
+    best_pid = max(scores, key=scores.get) if scores else "custom"
+    best_score = scores[best_pid] if scores else 0
     
     if best_score < 3:
-        # Fallback cho đề tài bất kỳ
         return {
             "problem_id": "custom",
-            "label": "Đề tài Nghiên cứu Tùy chỉnh (AI detected)",
-            "matched": ["Tổng quát", "Nghiên cứu khoa học"],
+            "label": "Đề tài Nghiên cứu Tùy chỉnh",
+            "matched": ["Tổng quát"],
             "score": best_score,
             "is_custom": True
         }
@@ -1010,16 +1087,119 @@ def recognize_problem_ai(prompt: str):
         "is_custom": False
     }
 
-    if not scores or max(scores.values()) < 1:
-        return {"error": "AI chưa nhận diện được loại bài toán. Vui lòng mô tả chi tiết hơn."}
+def call_gemini_with_fallback(system_prompt: str, is_pro: bool = False) -> str:
+    """Gọi Gemini API có tính năng tự động tìm Model khả dụng và tự động thử model khác nếu hết Quota (429) hoặc lỗi."""
+    api_key = st.session_state.get('gemini_api_key', '') or os.getenv("GEMINI_API_KEY")
+    genai.configure(api_key=api_key)
+    
+    available_models = []
+    try:
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                available_models.append(m.name)
+    except Exception as e:
+        raise Exception(f"Không thể truy cập danh sách model. API Key có thể không hợp lệ hoặc lỗi mạng: {e}")
+        
+    if not available_models:
+        raise Exception("API Key của bạn không có mô hình nào hỗ trợ text generation.")
 
-    best = max(scores, key=lambda k: scores[k])
-    return {
-        "problem_id": best, 
-        "score": scores[best], 
-        "matched": matched_all[best], 
-        "label": PROBLEMS_AI[best]["label"]
+    ranked_models = []
+    if is_pro:
+        for kw in ['1.5-pro', '1.0-pro', 'gemini-pro', '1.5-flash', 'pro', 'flash']:
+            for m in available_models:
+                if kw in m and m not in ranked_models and '2.5' not in m:
+                    ranked_models.append(m)
+        for m in available_models:
+            if m not in ranked_models:
+                ranked_models.append(m)
+    else:
+        for kw in ['1.5-flash', 'gemini-pro', '1.5-pro', 'flash', 'pro']:
+            for m in available_models:
+                if kw in m and m not in ranked_models and '2.5' not in m:
+                    ranked_models.append(m)
+        for m in available_models:
+            if m not in ranked_models:
+                ranked_models.append(m)
+                
+    last_err = None
+    for m in ranked_models:
+        try:
+            model = genai.GenerativeModel(m)
+            response = model.generate_content(system_prompt)
+            return response.text
+        except Exception as e:
+            last_err = e
+            continue
+            
+    raise Exception(f"Đã thử toàn bộ danh sách Model nhưng đều thất bại do lỗi Model/Quota. Lỗi cuối cùng: {last_err}")
+
+def generate_analysis_plan_ai(problem_id: str, problem_desc: str, ai_level: str, major: str = "") -> dict:
+    """Sinh cả Giải thích và Lộ trình động bằng AI dựa trên bài toán và trình độ."""
+    api_key = st.session_state.get('gemini_api_key', '') or os.getenv("GEMINI_API_KEY")
+    
+    fallback_roadmap = ROADMAP_AI.get(problem_id, {}).get(ai_level, [])
+    if not fallback_roadmap:
+        fallback_roadmap = [
+            "📌 Bước 1: Làm sạch và mã hóa dữ liệu thô",
+            "📌 Bước 2: Phân tích cơ bản",
+            "📊 Bước 3: Kiểm định mô hình"
+        ]
+    fallback_expl = PROBLEM_EXPLANATIONS_AI.get(problem_id, PROBLEM_EXPLANATIONS_AI["custom"])
+    fallback_result = {
+        "explanation": fallback_expl,
+        "roadmap": fallback_roadmap
     }
+
+    if not api_key:
+        return fallback_result
+    
+    try:
+        level_instruction = ""
+        if ai_level == "undergraduate":
+            level_instruction = "Trình độ Cử nhân (Undergraduate): Lộ trình và giải thích CÓ THỂ giải quyết bài toán TRÙNG LẶP với cách thức giải đã có trên mạng. Không cần tính mới. Khối lượng và số lượng bước tùy thuộc vào bài toán."
+        elif ai_level == "master":
+            level_instruction = "Trình độ Thạc sĩ (Master): Lộ trình và giải thích có thể trùng một phần với cách giải trên mạng nhưng BẮT BUỘC PHẢI CÓ CẢI TIẾN (ví dụ: dùng phương pháp mới hơn, so sánh nhiều mô hình, hoặc xử lý nhiễu). Khối lượng và số lượng bước tùy thuộc vào bài toán và sự cải tiến."
+        elif ai_level in ["phd", "academic"]:
+            level_instruction = "Trình độ Tiến sĩ / Chuyên gia (PhD/Academic): TUYỆT ĐỐI KHÔNG ĐƯỢC TRÙNG LẶP với các cách giải thông thường trên mạng. BẮT BUỘC PHẢI CÓ TÍNH MỚI (Novelty) và ứng dụng phương pháp HIỆN ĐẠI (ví dụ: SEM nâng cao, học máy, mô hình phi tuyến). Số lượng bước tùy thuộc vào bài toán, nhưng phải cực kỳ chi tiết, đồ sộ và mang tính tiên phong."
+            
+        system_prompt = f"""Bạn là một giáo sư hướng dẫn nghiên cứu khoa học cấp cao.
+Hãy thiết kế Lời giải thích và Lộ trình phân tích dữ liệu thật logic, chi tiết và thuyết phục dựa trên bài toán dưới đây.
+
+Đề tài này thuộc chuyên ngành/khoa: {major if major else 'Không xác định'}. Hãy tùy chỉnh văn phong, các thuật ngữ lý thuyết và cách tiếp cận bài toán sao cho ĐẬM CHẤT chuyên ngành này.
+
+RẤT QUAN TRỌNG: KHÔNG cố định số lượng bước. Số lượng bước hoàn toàn tùy thuộc vào bài toán và tùy thuộc vào trình độ học thuật. Hãy thiết kế lộ trình tuân thủ nghiêm ngặt mô tả trình độ sau:
+{level_instruction}
+
+Mô tả đề tài (bài toán): "{problem_desc}"
+
+Chỉ trả về DUY NHẤT một đối tượng JSON với cấu trúc chính xác như sau, KHÔNG có markdown, KHÔNG giải thích thêm:
+{{
+  "explanation": {{
+    "intro": "Đoạn mở đầu giải thích bài toán ngắn gọn.",
+    "concept": "Diễn giải cách giải quyết cốt lõi.",
+    "key_terms": ["Chỉ số/Khái niệm 1", "Chỉ số/Khái niệm 2"]
+  }},
+  "roadmap": [
+    "📌 Bước 1: [Mô tả công việc của bước 1]",
+    "🔍 Bước 2: [Mô tả công việc của bước 2]",
+    "... (Số lượng bước là hoàn toàn linh hoạt, hãy tự do quyết định tùy thuộc vào bài toán và quy mô của trình độ) ..."
+  ]
+}}
+"""
+        response_text = call_gemini_with_fallback(system_prompt, is_pro=True)
+        result_text = response_text.strip()
+        
+        import re
+        json_match = re.search(r'\{.*\}', result_text, re.DOTALL)
+        if json_match:
+            parsed_json = json.loads(json_match.group(0))
+            if "explanation" in parsed_json and "roadmap" in parsed_json:
+                return parsed_json
+            
+    except Exception as e:
+        st.warning(f"Lỗi khi gọi AI sinh lộ trình động: {e}")
+        
+    return fallback_result
 
 def analyze_essay_details(text: str, active_problem_id: str = None) -> dict:
     """
@@ -2109,6 +2289,32 @@ with st.sidebar:
     """)
     st.caption("💡 Dữ liệu được tự động lưu lại khi bạn chuyển trang.")
     
+    st.markdown("---")
+    st.markdown("### 🔑 Cấu hình AI")
+    gemini_key = st.text_input("Nhập Google Gemini API Key:", 
+                               value=st.session_state.get('gemini_api_key', ''),
+                               type="password", 
+                               help="Lấy API Key từ Google AI Studio để hệ thống phân tích đề tài ở trình độ chuyên gia.")
+    
+    col_k1, col_k2 = st.columns([1, 1])
+    with col_k1:
+        if st.button("💾 Lưu Key"):
+            if gemini_key:
+                save_api_key(gemini_key)
+                st.session_state.gemini_api_key = gemini_key
+                st.success("Đã lưu!")
+            else:
+                st.warning("Chưa có Key")
+    with col_k2:
+        if st.button("🗑️ Xóa Key"):
+            save_api_key("")
+            st.session_state.gemini_api_key = ""
+            st.success("Đã xóa!")
+            st.rerun()
+
+    if gemini_key:
+        st.session_state.gemini_api_key = gemini_key
+    
     # Bỏ nút làm mới để làm sạch menu theo yêu cầu
 
 # Row 1: Metrics (Phân bổ theo hàng ngang - 4 Columns KPI Dashboard)
@@ -2178,6 +2384,12 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
                                height=100,
                                key="ai_prompt_input")
         st.session_state.ai_prompt_val = ai_prompt
+        
+        ai_major = st.text_input("🏢 Lớp / Khoa / Ngành học (Tùy chọn):",
+                               value=st.session_state.ai_major_val,
+                               placeholder="Ví dụ: Quản trị Kinh doanh, CNTT, Tài chính Kế toán...",
+                               key="ai_major_input_1")
+        st.session_state.ai_major_val = ai_major
             
         # Cấu trúc 1 cột đầy màn hình
         level_keys = list(LEVEL_LABELS_AI.keys())
@@ -2196,7 +2408,7 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
             if not ai_prompt:
                 st.warning("Vui lòng nhập mô tả để AI bắt đầu phân tích.")
             else:
-                rec = recognize_problem_ai(ai_prompt)
+                rec = recognize_problem_ai(ai_prompt, st.session_state.ai_major_val)
                 st.session_state.current_rec = rec
                 st.session_state.essay_analysis_results = None
 
@@ -2391,34 +2603,42 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
         confidence = "🟢 Cao" if rec['score'] >= 6 else ("🟡 Trung bình" if rec['score'] >= 3 else "🔴 Thấp")
         st.markdown(f"**Độ tin cậy:** {confidence}")
         
-        # --- PHẦN GIẢI THÍCH BÀI TOÁN ---
-        expl = PROBLEM_EXPLANATIONS_AI.get(rec['problem_id'], PROBLEM_EXPLANATIONS_AI["custom"])
-        with st.container(border=True):
-            st.markdown(f"#### 📚 Giải thích chuyên sâu: {expl['intro']}")
-            st.write(expl['concept'])
-            st.markdown("**Các khái niệm/chỉ số then chốt:**")
-            for term in expl['key_terms']:
-                st.markdown(f"- {term}")
-        
-        st.markdown("---")
-        
         # --- LỘ TRÌNH THỰC HIỆN ---
         st.subheader("🛤️ LỘ TRÌNH THỰC HIỆN")
         st.write(f"**Trình độ:** {LEVEL_LABELS_AI[ai_level]['label']}")
         st.caption(f"🎯 **Trọng tâm:** {LEVEL_LABELS_AI[ai_level]['focus']}")
         
-        roadmap = ROADMAP_AI.get(rec['problem_id'], {}).get(ai_level, [])
-        if rec.get('is_custom'):
-            roadmap = [
-                "Bước 1: Làm sạch và mã hóa dữ liệu thô",
-                "Bước 2: Kiểm định độ tin cậy thang đo (Cronbach's Alpha)",
-                "Bước 3: Phân tích nhân tố khám phá (EFA)",
-                "Bước 4: Phân tích tương quan Pearson",
-                "Bước 5: Kiểm định mô hình hồi quy (Regression)",
-                "Bước 6: Kiểm định sự khác biệt (T-test/ANOVA)"
-            ]
-            if ai_level in ["phd", "academic"]:
-                roadmap.insert(5, "Bước 5.1: Phân tích cấu trúc SEM / Mediation")
+        api_key = st.session_state.get('gemini_api_key', '') or os.getenv("GEMINI_API_KEY")
+        if api_key:
+            with st.spinner("AI đang thiết kế giải thích và lộ trình phân tích cấp độ chuyên gia..."):
+                problem_desc_text = st.session_state.get('ai_prompt_val', rec['label'])
+                plan = generate_analysis_plan_ai(rec['problem_id'], problem_desc_text, ai_level, st.session_state.ai_major_val)
+                expl = plan.get('explanation', PROBLEM_EXPLANATIONS_AI.get(rec['problem_id'], PROBLEM_EXPLANATIONS_AI["custom"]))
+                roadmap = plan.get('roadmap', [])
+        else:
+            expl = PROBLEM_EXPLANATIONS_AI.get(rec['problem_id'], PROBLEM_EXPLANATIONS_AI["custom"])
+            roadmap = ROADMAP_AI.get(rec['problem_id'], {}).get(ai_level, [])
+            if rec.get('is_custom') or not roadmap:
+                roadmap = [
+                    "Bước 1: Làm sạch và mã hóa dữ liệu thô",
+                    "Bước 2: Kiểm định độ tin cậy thang đo (Cronbach's Alpha)",
+                    "Bước 3: Phân tích nhân tố khám phá (EFA)",
+                    "Bước 4: Phân tích tương quan Pearson",
+                    "Bước 5: Kiểm định mô hình hồi quy (Regression)",
+                    "Bước 6: Kiểm định sự khác biệt (T-test/ANOVA)"
+                ]
+                if ai_level in ["phd", "academic"]:
+                    roadmap.insert(5, "Bước 5.1: Phân tích cấu trúc SEM / Mediation")
+
+        with st.container(border=True):
+            st.markdown(f"#### 📚 Giải thích chuyên sâu: {expl['intro']}")
+            st.write(expl['concept'])
+            if 'key_terms' in expl:
+                st.markdown("**Các khái niệm/chỉ số then chốt:**")
+                for term in expl['key_terms']:
+                    st.markdown(f"- {term}")
+        
+        st.markdown("---")
 
         if roadmap:
             for step in roadmap:
@@ -2555,6 +2775,17 @@ elif menu_selection == "📥 Quản lý Dữ liệu":
             st.success("✅ Đã cập nhật cấu hình biến cho dự án này!")
             st.session_state.results = None # Reset kết quả để tính lại theo cấu hình mới
             st.rerun()
+
+        # ✨ AI Đề xuất Cấu hình
+        if st.button("✨ AI Đề xuất Cấu hình", use_container_width=True):
+            with st.spinner("AI đang tạo cấu hình mô hình…"):
+                desc = st.session_state.get('ai_prompt_val', "")
+                cfg = generate_model_config_ai(desc, st.session_state.ai_major_val)
+                if cfg:
+                    spss.ACTIVE_CONFIG = cfg
+                    st.success("✅ Cấu hình mô hình được cập nhật từ AI!")
+                    st.session_state.results = None
+                    st.rerun()
 
     st.write("---")
     st.subheader("🎲 4. Khởi tạo & Nhập liệu")
