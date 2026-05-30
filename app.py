@@ -903,7 +903,8 @@ def generate_analysis_plan_ai(problem_id: str, problem_desc: str, ai_level: str,
     fallback_expl = PROBLEM_EXPLANATIONS_AI.get(problem_id, PROBLEM_EXPLANATIONS_AI["custom"])
     fallback_result = {
         "explanation": fallback_expl,
-        "roadmap": fallback_roadmap
+        "roadmap": fallback_roadmap,
+        "detailed_roadmap": [{"step": s, "theory": "Chưa có", "math": "Chưa có", "expected": "Chưa có", "recommendation": "Chưa có"} for s in fallback_roadmap]
     }
 
     if not api_key:
@@ -912,46 +913,65 @@ def generate_analysis_plan_ai(problem_id: str, problem_desc: str, ai_level: str,
     try:
         level_instruction = ""
         if ai_level == "undergraduate":
-            level_instruction = "Trình độ Cử nhân (Undergraduate): Lộ trình và giải thích CÓ THỂ giải quyết bài toán TRÙNG LẶP với cách thức giải đã có trên mạng. Không cần tính mới. Khối lượng và số lượng bước tùy thuộc vào bài toán."
+            level_instruction = "Trình độ Cử nhân (Undergraduate): CÓ THỂ giải quyết bài toán TRÙNG LẶP với cách thức giải đã có trên mạng."
         elif ai_level == "master":
-            level_instruction = "Trình độ Thạc sĩ (Master): Lộ trình và giải thích có thể trùng một phần với cách giải trên mạng nhưng BẮT BUỘC PHẢI CÓ CẢI TIẾN (ví dụ: dùng phương pháp mới hơn, so sánh nhiều mô hình, hoặc xử lý nhiễu). Khối lượng và số lượng bước tùy thuộc vào bài toán và sự cải tiến."
+            level_instruction = "Trình độ Thạc sĩ (Master): BẮT BUỘC PHẢI CÓ CẢI TIẾN (dùng phương pháp mới hơn, so sánh nhiều mô hình, xử lý nhiễu)."
         elif ai_level in ["phd", "academic"]:
-            level_instruction = "Trình độ Tiến sĩ / Chuyên gia (PhD/Academic): TUYỆT ĐỐI KHÔNG ĐƯỢC TRÙNG LẶP với các cách giải thông thường trên mạng. BẮT BUỘC PHẢI CÓ TÍNH MỚI (Novelty) và ứng dụng phương pháp HIỆN ĐẠI (ví dụ: SEM nâng cao, học máy, mô hình phi tuyến). Số lượng bước tùy thuộc vào bài toán, nhưng phải cực kỳ chi tiết, đồ sộ và mang tính tiên phong."
+            level_instruction = "Trình độ Tiến sĩ / Chuyên gia (PhD/Academic): TUYỆT ĐỐI KHÔNG ĐƯỢC TRÙNG LẶP với cách giải thông thường. BẮT BUỘC PHẢI CÓ TÍNH MỚI (Novelty) và ứng dụng phương pháp HIỆN ĐẠI."
             
+        import json
+        roadmap_json_str = json.dumps(fallback_roadmap, ensure_ascii=False)
+        
         system_prompt = f"""Bạn là một giáo sư hướng dẫn nghiên cứu khoa học cấp cao.
-Hãy thiết kế Lời giải thích và Lộ trình phân tích dữ liệu thật logic, chi tiết và thuyết phục dựa trên bài toán dưới đây.
+Hãy thiết kế Lời giải thích và Lộ trình phân tích dữ liệu thật chi tiết, mang tính học thuật cao.
 
-Đề tài này thuộc chuyên ngành/khoa: {major if major else 'Không xác định'}. Hãy tùy chỉnh văn phong, các thuật ngữ lý thuyết và cách tiếp cận bài toán sao cho ĐẬM CHẤT chuyên ngành này.
+Đề tài thuộc chuyên ngành: {major if major else 'Không xác định'}. Hãy sử dụng văn phong và thuật ngữ học thuật ĐẬM CHẤT chuyên ngành này.
 
-RẤT QUAN TRỌNG: KHÔNG cố định số lượng bước. Số lượng bước hoàn toàn tùy thuộc vào bài toán và tùy thuộc vào trình độ học thuật. Hãy thiết kế lộ trình tuân thủ nghiêm ngặt mô tả trình độ sau:
+RẤT QUAN TRỌNG: Bạn BẮT BUỘC phải dùng CHÍNH XÁC danh sách các bước sau đây để làm Lộ trình (không thêm, không bớt, không đổi tên):
+{roadmap_json_str}
+
+Nhiệm vụ của bạn là cung cấp HỒ SƠ CHI TIẾT cho từng bước trong lộ trình trên theo đúng yêu cầu của người dùng:
+1. Cơ sở lý thuyết của bước này.
+2. Mô hình toán học hoặc công thức áp dụng.
+3. Kết quả đạt được kỳ vọng (kèm minh chứng số liệu giả định).
+4. Cải tiến và kiến nghị chuyên sâu.
+
+Tuân thủ nghiêm ngặt mô tả trình độ:
 {level_instruction}
 
-Mô tả đề tài (bài toán): "{problem_desc}"
+Bài toán: "{problem_desc}"
 
-Chỉ trả về DUY NHẤT một đối tượng JSON với cấu trúc chính xác như sau, KHÔNG có markdown, KHÔNG giải thích thêm:
+Chỉ trả về DUY NHẤT một đối tượng JSON với cấu trúc:
 {{
   "explanation": {{
     "intro": "Đoạn mở đầu giải thích bài toán ngắn gọn.",
     "concept": "Diễn giải cách giải quyết cốt lõi.",
-    "key_terms": ["Chỉ số/Khái niệm 1", "Chỉ số/Khái niệm 2"]
+    "key_terms": ["Khái niệm 1", "Khái niệm 2"]
   }},
-  "roadmap": [
-    "📌 Bước 1: [Mô tả công việc của bước 1]",
-    "🔍 Bước 2: [Mô tả công việc của bước 2]",
-    "... (Số lượng bước là hoàn toàn linh hoạt, hãy tự do quyết định tùy thuộc vào bài toán và quy mô của trình độ) ..."
+  "detailed_roadmap": [
+    {{
+      "step": "Tên bước y hệt danh sách cung cấp",
+      "theory": "Cơ sở lý thuyết...",
+      "math": "Mô hình toán học...",
+      "expected": "Kết quả đạt được kèm minh chứng...",
+      "recommendation": "Cải tiến kiến nghị..."
+    }}
   ]
 }}
 """
         response_text = call_gemini_with_fallback(system_prompt, is_pro=True)
         result_text = response_text.strip()
         
-        import re
         json_match = re.search(r'\{.*\}', result_text, re.DOTALL)
         if json_match:
             parsed_json = json.loads(json_match.group(0))
-            if "explanation" in parsed_json:
-                # ÉP BUỘC roadmap phải lấy từ ROADMAP_AI tĩnh để tránh AI sinh ảo
+            if "explanation" in parsed_json and "detailed_roadmap" in parsed_json:
+                # Đảm bảo roadmap list cơ bản vẫn tồn tại cho sidebar
                 parsed_json["roadmap"] = fallback_roadmap
+                # Sửa lại step name trong detailed_roadmap cho chắc chắn khớp
+                for i, item in enumerate(parsed_json["detailed_roadmap"]):
+                    if i < len(fallback_roadmap):
+                        item["step"] = fallback_roadmap[i]
                 return parsed_json
             
     except Exception as e:
@@ -2577,6 +2597,7 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
         st.write(f"**Trình độ:** {LEVEL_LABELS_AI[ai_level]['label']}")
         st.caption(f"🎯 **Trọng tâm:** {LEVEL_LABELS_AI[ai_level]['focus']}")
         
+        plan = {}
         api_key = st.session_state.get('gemini_api_key', '') or os.getenv("GEMINI_API_KEY")
         if api_key:
             with st.spinner("AI đang thiết kế giải thích và lộ trình phân tích cấp độ chuyên gia..."):
@@ -2585,6 +2606,10 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
                 expl = plan.get('explanation', PROBLEM_EXPLANATIONS_AI.get(rec['problem_id'], PROBLEM_EXPLANATIONS_AI["custom"]))
                 roadmap = plan.get('roadmap', [])
         else:
+            # When no API key is provided, still create a basic plan structure so it can be handled
+            plan = {
+                "detailed_roadmap": [{"step": s, "theory": "Chưa có API Key để sinh", "math": "Chưa có", "expected": "Chưa có", "recommendation": "Chưa có"} for s in ROADMAP_AI.get(rec['problem_id'], {}).get(ai_level, [])]
+            }
             expl = PROBLEM_EXPLANATIONS_AI.get(rec['problem_id'], PROBLEM_EXPLANATIONS_AI["custom"])
             roadmap = ROADMAP_AI.get(rec['problem_id'], {}).get(ai_level, [])
             if rec.get('is_custom') or not roadmap:
@@ -2610,8 +2635,16 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
         st.markdown("---")
 
         if roadmap:
-            for step in roadmap:
-                st.markdown(f"✅ {step}")
+            if 'detailed_roadmap' in plan and plan['detailed_roadmap'] and plan['detailed_roadmap'][0].get("theory", "") != "Chưa có":
+                for item in plan['detailed_roadmap']:
+                    with st.expander(f"✅ {item.get('step', 'Bước')}", expanded=False):
+                        st.markdown(f"**📚 Cơ sở lý thuyết:** {item.get('theory', '')}")
+                        st.markdown(f"**🧮 Mô hình toán học:** {item.get('math', '')}")
+                        st.markdown(f"**🎯 Kết quả kỳ vọng & Minh chứng:** {item.get('expected', '')}")
+                        st.markdown(f"**💡 Cải tiến & Kiến nghị:** {item.get('recommendation', '')}")
+            else:
+                for step in roadmap:
+                    st.markdown(f"✅ {step}")
             
             st.write("")
             if st.button("🚀 Thực thi Toàn bộ Lộ trình & In Báo cáo chi tiết ngay tại đây", use_container_width=True, type="primary"):
