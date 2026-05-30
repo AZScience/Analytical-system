@@ -1323,7 +1323,7 @@ def create_charts(df, df_means, cronbach_results, efa_results, reg_results):
         var_codes = list(cfg.keys())
         active_vars = [v for v in var_codes if v in df_means.columns]
         means = [df_means[v].mean() for v in active_vars]
-        colors = [cfg[v]["color"] for v in active_vars]
+        colors = [cfg[v].get("color", "#3b82f6") for v in active_vars]
         bars = ax1.barh(active_vars, means, color=colors, height=0.6)
         ax1.axvline(x=3.5, color=C_RED, linestyle='--', label='Ngưỡng trung bình 3.5')
         for bar, m in zip(bars, means):
