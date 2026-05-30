@@ -16,3 +16,4 @@ PyPDF2
 streamlit-google-auth
 st-gsheets-connection
 gspread
+google-generativeai
