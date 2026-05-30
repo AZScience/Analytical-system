@@ -119,13 +119,8 @@ def manual_entry_dialog():
             st.success("✅ Đã lưu Case mới vào Data View!")
             st.rerun()
 
-ABBR_EXPLAIN = {
-    "CSVC": "Cơ sở vật chất",
-    "AN": "An ninh - An toàn",
-    "HT": "Dịch vụ hỗ trợ",
-    "NV": "Nhân viên quản lý",
-    "CLDV": "Chất lượng cảm nhận dịch vụ",
-    "HL": "Sự hài lòng",
+# ABBR_EXPLAIN: Phần viết tắt thống kê – luôn được bổ sung tự động từ ACTIVE_CONFIG
+_STATS_ABBR = {
     "KMO": "Kaiser-Meyer-Olkin (chỉ số phù hợp để phân tích nhân tố)",
     "EFA": "Exploratory Factor Analysis (Phân tích nhân tố khám phá)",
     "PCA": "Principal Component Analysis (Phân tích thành phần chính)",
@@ -140,6 +135,14 @@ ABBR_EXPLAIN = {
     "ANOVA": "Analysis of Variance (kiểm định phương sai giữa nhiều nhóm)",
     "n.s.": "Not significant (không có ý nghĩa thống kê)"
 }
+
+def get_abbr_explain():
+    """Trả về dict viết tắt – bao gồm tất cả mã biến từ ACTIVE_CONFIG hiện tại."""
+    dynamic = {v_code: v_info.get('label', v_code)
+               for v_code, v_info in spss.ACTIVE_CONFIG.get('variables', {}).items()}
+    return {**dynamic, **_STATS_ABBR}
+
+ABBR_EXPLAIN = get_abbr_explain()
 
 # ================================================================
 # DATA STRUCTURES FOR AI RESEARCH ASSISTANT
@@ -807,20 +810,20 @@ RESOURCES_AI = {
         "undergraduate": {
             "proposal": "📝 Đề cương: Nghiên cứu các nhân tố tác động",
             "refs": "📚 Ref: Gujarati (2004), Basic Econometrics",
-            "template": "📄 Mẫu: Phiếu khảo sát 5-point Likert",
-            "preview": "═════════════════════════════════════════════════════════════════\n PHIẾU KHẢO SÁT MỨC ĐỘ HÀI LÒNG CỦA SINH VIÊN ĐỐI VỚI CÔNG TÁC QUẢN LÝ KÝ TÚC XÁ – TRƯỜNG ĐH NTTU\n═════════════════════════════════════════════════════════════════\n\nKính chào Anh/Chị sinh viên!\nCuộc khảo sát này nhằm thu thập ý kiến đánh giá của sinh viên đang lưu\ntrú tại ký túc xá Trường Đại học Nguyễn Tất Thành. Thông tin chỉ phục\nvụ mục đích nghiên cứu khoa học, được bảo mật hoàn toàn.\nXin trân trọng cảm ơn!\n\n─────────────────────────────────────────────────────────────────\nPHẦN I: THÔNG TIN NHÂN KHẨU HỌC\n─────────────────────────────────────────────────────────────────\n\n1. Giới tính:     □ Nam     □ Nữ     □ Khác\n2. Bạn đang học năm: □ Năm 1  □ Năm 2  □ Năm 3  □ Năm 4+\n3. Ngành học: ______________________________________\n4. Thời gian sinh sống tại KTX:\n   □ Dưới 1 năm   □ Từ 1–2 năm   □ Trên 2 năm\n5. Chi phí thuê phòng do ai chi trả:\n   □ Tự túc   □ Học bổng/hỗ trợ   □ Gia đình\n\n─────────────────────────────────────────────────────────────────\nPHẦN II: ĐÁNH GIÁ CÁC NHÂN TỐ QUẢN LÝ KÝ TÚC XÁ\n─────────────────────────────────────────────────────────────────\nThang đo: 1=Hoàn toàn không đồng ý · 2=Không đồng ý · 3=Trung lập\n          4=Đồng ý · 5=Hoàn toàn đồng ý\n\n[CSVC] CƠ SỞ VẬT CHẤT KÝ TÚC XÁ\n──────────────────────────────────────────────────\n   1. (CSVC1) Phòng ở đáp ứng nhu cầu sinh hoạt của sinh viên\n      □1  □2  □3  □4  □5\n   2. (CSVC2) Trang thiết bị trong phòng hoạt động tốt\n      □1  □2  □3  □4  □5\n   3. (CSVC3) Hệ thống điện, nước hoạt động ổn định\n      □1  □2  □3  □4  □5\n   4. (CSVC4) Khu vệ sinh bảo đảm điều kiện sử dụng\n      □1  □2  □3  □4  □5\n   5. (CSVC5) Không gian sinh hoạt chung thuận tiện\n      □1  □2  □3  □4  □5\n\n[AN] AN NINH VÀ AN TOÀN KÝ TÚC XÁ\n──────────────────────────────────────────────────\n   6. (AN1) Cảm thấy an toàn khi sinh sống tại ký túc xá\n      □1  □2  □3  □4  □5\n   7. (AN2) Công tác bảo vệ được thực hiện nghiêm túc\n      □1  □2  □3  □4  □5\n   8. (AN3) Việc kiểm soát ra vào ký túc xá được thực hiện tốt\n      □1  □2  □3  □4  □5\n   9. (AN4) Ký túc xá có biện pháp bảo đảm an toàn PCCC\n      □1  □2  □3  □4  □5\n\n[HT] DỊCH VỤ HỖ TRỢ SINH VIÊN\n──────────────────────────────────────────────────\n  10. (HT1) Ban quản lý hỗ trợ sinh viên khi có yêu cầu\n      □1  □2  □3  □4  □5\n  11. (HT2) Các yêu cầu của sinh viên được xử lý kịp thời\n      □1  □2  □3  □4  □5\n  12. (HT3) Sinh viên dễ dàng liên hệ với Ban quản lý KTX\n      □1  □2  □3  □4  □5\n  13. (HT4) Thông tin liên quan đến KTX được cung cấp đầy đủ\n      □1  □2  □3  □4  □5\n\n[NV] NHÂN VIÊN QUẢN LÝ KÝ TÚC XÁ\n──────────────────────────────────────────────────\n  14. (NV1) Nhân viên quản lý có thái độ thân thiện\n      □1  □2  □3  □4  □5\n  15. (NV2) Nhân viên làm việc có trách nhiệm\n      □1  □2  □3  □4  □5\n  16. (NV3) Nhân viên có kỹ năng giao tiếp tốt\n      □1  □2  □3  □4  □5\n  17. (NV4) Nhân viên hỗ trợ sinh viên một cách tận tình\n      □1  □2  □3  □4  □5\n\n[CLDV] CHẤT LƯỢNG CẢM NHẬN DỊCH VỤ KTX\n──────────────────────────────────────────────────\n  18. (CLDV1) Chất lượng dịch vụ KTX đáp ứng nhu cầu của tôi\n      □1  □2  □3  □4  □5\n  19. (CLDV2) Dịch vụ KTX có chất lượng tốt\n      □1  □2  □3  □4  □5\n  20. (CLDV3) Dịch vụ KTX đáng tin cậy\n      □1  □2  □3  □4  □5\n  21. (CLDV4) Chất lượng dịch vụ KTX nhìn chung là tốt\n      □1  □2  □3  □4  □5\n\n[HL] SỰ HÀI LÒNG CỦA SINH VIÊN NỘI TRÚ\n──────────────────────────────────────────────────\n  22. (HL1) Hài lòng với điều kiện sống tại ký túc xá\n      □1  □2  □3  □4  □5\n  23. (HL2) KTX đáp ứng kỳ vọng ban đầu của tôi\n      □1  □2  □3  □4  □5\n  24. (HL3) Sẵn sàng tiếp tục sinh sống tại ký túc xá\n      □1  □2  □3  □4  □5\n  25. (HL4) Sẽ giới thiệu KTX cho sinh viên khác\n      □1  □2  □3  □4  □5\n\n─────────────────────────────────────────────────────────────────\nÝ kiến khác (nếu có):\n___________________________________________________________________\n___________________________________________________________________\n\nXin chân thành cảm ơn sự hợp tác của Anh/Chị!\n═════════════════════════════════════════════════════════════════"
+            "template": "📄 Mẫu: Phiếu khảo sát 5-point Likert (sinh tự động theo bài toán)",
+            "preview": "[Phiếu khảo sát sẽ được sinh tự động dựa trên cấu hình bài toán hiện tại.\nVui lòng nhấn '✨ AI Đề xuất Cấu hình' trước, sau đó dùng chức năng 'Tạo Phiếu Khảo Sát' để xem phiếu theo đúng đề tài của bạn.]"
         },
         "master": {
             "proposal": "📝 Đề cương: Mô hình hồi quy đa biến & Kiểm định",
             "refs": "📚 Ref: Hair et al. (2010), Multivariate Data Analysis",
             "template": "📄 Mẫu: File nhập liệu SPSS (Cleaned)",
-            "preview": "═════════════════════════════════════════════════════════════════\n PHIẾU KHẢO SÁT MỨC ĐỘ HÀI LÒNG CỦA SINH VIÊN ĐỐI VỚI CÔNG TÁC QUẢN LÝ KÝ TÚC XÁ – TRƯỜNG ĐH NTTU\n═════════════════════════════════════════════════════════════════\n\n*(Xem nội dung phiếu tương tự như bậc Cử nhân phía trên)*\n\n### CẤU TRÚC BIẾN TRONG SPSS (BẬC THẠC SĨ)\n\n**1. Biến Độc lập (IVs):**\n- **CSVC**: Mean (CSVC1-CSVC5)  -  **AN**: Mean (AN1-AN4)\n- **HT**: Mean (HT1-HT4)        -  **NV**: Mean (NV1-NV4)\n\n**2. Biến Phụ thuộc (DV):**\n- **HL**: Mean (HL1-HL4)\n\n**3. Kiểm định Robustness:**\n- Kiểm định phương sai thay đổi (White/BP test).\n- Kiểm định tự tương quan (Durbin-Watson).\n- Kiểm định đa cộng tuyến (VIF < 10)."
+            "preview": "[Phiếu khảo sát Thạc sĩ sẽ được sinh tự động theo bài toán hiện tại.\n\n### CẤU TRÚC BIẾN TRONG SPSS (BẬC THẠC SĨ)\n\n**1. Biến Độc lập (IVs):** Lấy từ ACTIVE_CONFIG – các biến loại 'independent'\n**2. Biến Phụ thuộc (DV):** Lấy từ ACTIVE_CONFIG – các biến loại 'dependent'\n\n**3. Kiểm định Robustness:**\n- Kiểm định phương sai thay đổi (White/BP test).\n- Kiểm định tự tương quan (Durbin-Watson).\n- Kiểm định đa cộng tuyến (VIF < 10).]"
         },
         "phd": {
             "proposal": "📝 Đề cương: Phân tích mô hình trung gian & điều tiết",
             "refs": "📚 Ref: Hayes (2017), Introduction to Mediation, Moderation...",
             "template": "📄 Mẫu: Sơ đồ mô hình (Hayes Process)",
-            "preview": "═════════════════════════════════════════════════════════════════\n PHIẾU KHẢO SÁT MỨC ĐỘ HÀI LÒNG CỦA SINH VIÊN ĐỐI VỚI CÔNG TÁC QUẢN LÝ KÝ TÚC XÁ – TRƯỜNG ĐH NTTU\n═════════════════════════════════════════════════════════════════\n\n### MÔ HÌNH TRUNG GIAN & ĐIỀU TIẾT (BẬC TIẾN SĨ)\n\n**Mô hình đề xuất:**\n[CSVC, AN, HT, NV] ➔ **[CLDV]** ➔ **[HL]**\n\n- **X (Independent)**: Các nhân tố quản lý.\n- **M (Mediator)**: Chất lượng cảm nhận (CLDV1-CLDV4).\n- **Y (Dependent)**: Sự hài lòng (HL1-HL4).\n- **W (Moderator)**: Đặc điểm nhân khẩu học (Năm học/Giới tính).\n\n*Yêu cầu PhD: Thực hiện phân tích cấu trúc tuyến tính SEM hoặc kỹ thuật Bootstrap để khẳng định tính vững của mô hình.*"
+            "preview": "[Phiếu khảo sát Tiến sĩ sẽ được sinh tự động theo bài toán hiện tại.\n\n### MÔ HÌNH TRUNG GIAN & ĐIỀU TIẾT (BẬC TIẾN SĨ)\n\n**Mô hình đề xuất:** Xem tại mục 'Cấu hình Nhân tố & Thang đo' trong ACTIVE_CONFIG.\n\n- **X (Independent)**: Các biến loại 'independent' từ ACTIVE_CONFIG.\n- **M (Mediator)**: Các biến loại 'mediator' từ ACTIVE_CONFIG.\n- **Y (Dependent)**: Biến loại 'dependent' từ ACTIVE_CONFIG.\n- **W (Moderator)**: Biến nhân khẩu học từ demographics.\n\n*Yêu cầu PhD: Thực hiện phân tích cấu trúc tuyến tính SEM hoặc kỹ thuật Bootstrap để khẳng định tính vững của mô hình.*]"
         },
         "academic": {
             "proposal": "📝 Đề cương: Mô hình SEM & Phân tích đa cấp",
@@ -1200,6 +1203,81 @@ Chỉ trả về DUY NHẤT một đối tượng JSON với cấu trúc chính 
         st.warning(f"Lỗi khi gọi AI sinh lộ trình động: {e}")
         
     return fallback_result
+
+def generate_model_config_ai(desc: str, major: str = "") -> dict:
+    """Generate a model configuration (ACTIVE_CONFIG) using AI based on the problem description and major.
+    Returns a dict compatible with the expected ACTIVE_CONFIG structure.
+    Falls back to a dynamically built blank config if Gemini API key is missing or an error occurs.
+    """
+    import json, re
+
+    api_key = st.session_state.get('gemini_api_key', '') or os.getenv("GEMINI_API_KEY")
+
+    # ── Fallback động: trả về cấu hình trống nhưng gán tiêu đề từ desc ──────
+    def _blank_cfg():
+        return {
+            "title": desc.strip() if desc.strip() else "Mô hình nghiên cứu (chưa đặt tiêu đề)",
+            "author": "Hệ thống tự động",
+            "variables": {},
+            "hypotheses": [],
+            "demographics": []
+        }
+
+    if not api_key:
+        st.warning("⚠️ Chưa cấu hình Gemini API Key. Vui lòng nhập API Key để AI tạo cấu hình.")
+        return _blank_cfg()
+
+    if not desc.strip():
+        st.warning("⚠️ Vui lòng nhập **Mô tả nghiên cứu** trước khi yêu cầu AI đề xuất cấu hình.")
+        return _blank_cfg()
+
+    try:
+        system_prompt = f"""Bạn là một chuyên gia thiết kế mô hình nghiên cứu định lượng (SEM/SPSS).
+Đề tài nghiên cứu: {desc.strip()}
+Chuyên ngành/Khoa: {major.strip() if major.strip() else 'Không xác định'}
+
+Hãy tạo một cấu hình JSON cho ACTIVE_CONFIG phù hợp CHÍNH XÁC với đề tài trên. Cấu trúc bắt buộc:
+{{
+  "title": "<tiêu đề đề tài, lấy nguyên văn từ mô tả trên>",
+  "author": "AI Assistant",
+  "variables": {{
+    "<MÃ_BIẾN>": {{
+      "label": "<tên đầy đủ của nhân tố>",
+      "type": "<independent | mediator | dependent>",
+      "items": {{
+        "<MÃ_BIẾN>1": "<nội dung câu hỏi 1>",
+        "<MÃ_BIẾN>2": "<nội dung câu hỏi 2>",
+        "<MÃ_BIẾN>3": "<nội dung câu hỏi 3>",
+        "<MÃ_BIẾN>4": "<nội dung câu hỏi 4>"
+      }}
+    }}
+  }},
+  "hypotheses": [
+    ["H1", "<MÃ_IV> → <MÃ_DV>", "<Tên biến IV> ảnh hưởng (+) đến <Tên biến DV>"]
+  ],
+  "demographics": ["GioiTinh", "NamHoc"]
+}}
+
+Yêu cầu quan trọng:
+1. Tiêu đề ("title") PHẢI lấy nguyên văn từ đề tài được cung cấp.
+2. Tạo các nhân tố (biến) phù hợp với đề tài, KHÔNG dùng biến của đề tài khác.
+3. Mỗi nhân tố có ít nhất 4 câu hỏi (items) cụ thể, liên quan đến đề tài.
+4. Phải có ít nhất 1 biến độc lập (independent), 1 biến phụ thuộc (dependent).
+5. Trả về DUY NHẤT đối tượng JSON, không có markdown, không có giải thích thêm.
+"""
+        response_text = call_gemini_with_fallback(system_prompt, is_pro=True)
+        json_match = re.search(r"\{.*\}", response_text, re.DOTALL)
+        if json_match:
+            cfg = json.loads(json_match.group(0))
+            # Đảm bảo tiêu đề luôn là mô tả người dùng (không bị AI thay thế)
+            cfg["title"] = desc.strip() if desc.strip() else cfg.get("title", "Mô hình nghiên cứu")
+            return cfg
+        else:
+            st.warning("AI không trả về JSON hợp lệ. Vui lòng thử lại.")
+    except Exception as e:
+        st.warning(f"Lỗi khi gọi AI sinh cấu hình mô hình: {e}")
+
+    return _blank_cfg()
 
 def analyze_essay_details(text: str, active_problem_id: str = None) -> dict:
     """
@@ -2065,7 +2143,7 @@ def render_formula_catalog():
             "Công thức": "alpha = (k/(k-1)) * (1 - sum(var_i)/var_tong)",
             "Ý nghĩa khoa học": "Đo độ nhất quán nội bộ của thang đo.",
             "Ý nghĩa thực tế": "Xác nhận thang đo có đủ tin cậy trước khi EFA/hồi quy.",
-            "Hiện trạng": "Tính cho từng thang đo (CSVC, AN, HT, NV, CLDV, HL).",
+            "Hiện trạng": f"Tính cho từng thang đo ({', '.join(spss.ACTIVE_CONFIG.get('variables', {}).keys()) or 'theo cấu hình hiện tại'}).",
             "Đánh giá": ">=0.8 tốt; 0.7-0.8 đạt; 0.6-0.7 tạm; <0.6 chưa đạt.",
             "Kiến nghị": "Loại/chỉnh item có ITC < 0.3, tăng chất lượng dữ liệu."
         },
@@ -2385,11 +2463,7 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
                                key="ai_prompt_input")
         st.session_state.ai_prompt_val = ai_prompt
         
-        ai_major = st.text_input("🏢 Lớp / Khoa / Ngành học (Tùy chọn):",
-                               value=st.session_state.ai_major_val,
-                               placeholder="Ví dụ: Quản trị Kinh doanh, CNTT, Tài chính Kế toán...",
-                               key="ai_major_input_1")
-        st.session_state.ai_major_val = ai_major
+        
             
         # Cấu trúc 1 cột đầy màn hình
         level_keys = list(LEVEL_LABELS_AI.keys())
@@ -2715,7 +2789,12 @@ elif menu_selection == "📥 Quản lý Dữ liệu":
     # --- Tạo Template Download ---
     template_cols = ["ID", "GioiTinh", "NamHoc"]
     for var_info in spss.ACTIVE_CONFIG["variables"].values():
-        template_cols.extend(list(var_info["items"].keys()))
+        # Safely extend columns whether items is a dict or list
+        items = var_info.get("items", [])
+        if isinstance(items, dict):
+            template_cols.extend(list(items.keys()))
+        elif isinstance(items, list):
+            template_cols.extend(items)
     template_df = pd.DataFrame(columns=template_cols)
     csv_template = template_df.to_csv(index=False).encode('utf-8')
     
@@ -2758,18 +2837,34 @@ elif menu_selection == "📥 Quản lý Dữ liệu":
         new_title = st.text_input("Tiêu đề mô hình:", value=spss.ACTIVE_CONFIG.get("title", "Mô hình Nghiên cứu Tùy chỉnh"))
         spss.ACTIVE_CONFIG["title"] = new_title
         
-        for v_code, v_info in conf_vars.items():
-            c1, c2, c3 = st.columns([1, 2, 2])
-            with c1: st.code(v_code)
-            with c2: 
-                new_label = st.text_input(f"Nhãn nhân tố ({v_code}):", value=v_info['label'], key=f"edit_lbl_{v_code}")
-                v_info['label'] = new_label
-            with c3:
-                new_type = st.selectbox(f"Loại biến:", ["independent", "mediator", "dependent"], 
-                                      index=["independent", "mediator", "dependent"].index(v_info.get('type', 'independent')),
-                                      key=f"edit_typ_{v_code}")
-                v_info['type'] = new_type
-            st.caption(f"Biến quan sát: {', '.join(v_info['items'].keys())}")
+        # Prepare safe type options for variable editing
+        type_options = ["independent", "mediator", "dependent"]
+        if not conf_vars:
+            st.info("ℹ️ Chưa có cấu hình biến. Vui lòng nhấn '✨ AI Đề xuất Cấu hình' hoặc tải file dữ liệu có sẵn.")
+        else:
+            for v_code, v_info in conf_vars.items():
+                c1, c2, c3 = st.columns([1, 2, 2])
+                with c1:
+                    st.code(v_code)
+                with c2:
+                    new_label = st.text_input(f"Nhãn nhân tố ({v_code}):", value=v_info.get('label', v_code), key=f"edit_lbl_{v_code}")
+                    v_info['label'] = new_label
+                with c3:
+                    current_type = v_info.get('type', 'independent')
+                    safe_index = type_options.index(current_type) if current_type in type_options else 0
+                    new_type = st.selectbox(f"Loại biến:", type_options,
+                                          index=safe_index,
+                                          key=f"edit_typ_{v_code}")
+                    v_info['type'] = new_type
+                # Display observed variable items safely
+                items = v_info.get('items', [])
+                if isinstance(items, dict):
+                    observed = ', '.join(items.keys())
+                elif isinstance(items, list):
+                    observed = ', '.join(str(i) for i in items)
+                else:
+                    observed = ''
+                st.caption(f"Biến quan sát: {observed}")
         
         if st.button("💾 Lưu cấu hình tùy chỉnh", use_container_width=True):
             st.success("✅ Đã cập nhật cấu hình biến cho dự án này!")
@@ -2793,31 +2888,70 @@ elif menu_selection == "📥 Quản lý Dữ liệu":
     tab_sample, tab_manual = st.tabs(["🚀 Khởi tạo Mẫu", "📝 Nhập Phiếu Thủ công"])
     
     with tab_sample:
-        # Giữ nguyên 2 cột nhỏ cho thông số n và missing rate để gọn
-        c_n, c_m = st.columns(2)
-        with c_n:
-            sample_n = st.number_input("Số lượng mẫu (n)", 50, 2000, 250, step=50)
-        with c_m:
-            miss_rate = st.slider("Tỷ lệ thiếu (%)", 0, 30, 2)
-            
-        gen_mode = st.radio(
-            "Chế độ sinh dữ liệu:",
-            options=["Realistic but Guaranteed to Pass EFA (Đạt EFA 100%)", "Fully Messy Real-world (Đời thực - EFA có thể không đạt)"],
-            help="Chế độ 'Đạt EFA 100%' tối ưu hóa các tham số để đảm bảo hệ số KMO cao và các nhân tố phân biệt rõ ràng. Chế độ 'Đời thực' sinh dữ liệu giống thực tế có tỷ lệ nhiễu và ngoại lai cao, có thể đòi hỏi loại bỏ một số biến quan sát hoặc sử dụng công cụ Smart-Smooth."
-        )
-            
-        if st.button("🚀 Khởi tạo Dữ liệu Mẫu", use_container_width=True):
-            efa_pass = (gen_mode == "Realistic but Guaranteed to Pass EFA (Đạt EFA 100%)")
-            st.session_state.raw_df = spss.generate_data(
-                n=sample_n, 
-                missing_rate=miss_rate/100, 
-                efa_passing_guaranteed=efa_pass
+        # Hiển thị cấu hình hiện tại để người dùng xác nhận
+        _cfg_vars = spss.ACTIVE_CONFIG.get("variables", {})
+        _cfg_title = spss.ACTIVE_CONFIG.get("title", "")
+
+        if not _cfg_vars:
+            st.warning(
+                "⚠️ **Chưa có cấu hình nhân tố & thang đo.**\n\n"
+                "Vui lòng thực hiện một trong các bước sau trước khi tạo dữ liệu mẫu:\n"
+                "1. Nhấn **'✨ AI Đề xuất Cấu hình'** ở mục **3. Cấu hình Nhân tố & Thang đo** phía trên\n"
+                "2. Hoặc **tải file dữ liệu** sẵn có (Excel/CSV/SAV) để hệ thống tự nhận dạng cấu hình"
             )
-            st.session_state.df = st.session_state.raw_df.copy()
-            st.session_state.is_cleaned = False
-            st.session_state.results = None # Reset kết quả
-            st.success(f"Đã tạo {sample_n} mẫu với {miss_rate}% dữ liệu trống ({'Đạt EFA 100%' if efa_pass else 'Chế độ đời thực'}).")
-            st.rerun()
+        else:
+            # Tóm tắt cấu hình sẽ được dùng để sinh dữ liệu
+            with st.expander("📋 Cấu hình sẽ được dùng để sinh dữ liệu mẫu", expanded=True):
+                st.markdown(f"**📌 Đề tài:** {_cfg_title}")
+                _iv = [f"`{k}` – {v.get('label','?')}" for k,v in _cfg_vars.items() if v.get('type')=='independent']
+                _mv = [f"`{k}` – {v.get('label','?')}" for k,v in _cfg_vars.items() if v.get('type')=='mediator']
+                _dv = [f"`{k}` – {v.get('label','?')}" for k,v in _cfg_vars.items() if v.get('type')=='dependent']
+                # Đếm tổng số biến quan sát
+                _total_items = sum(
+                    len(v.get('items', {})) for v in _cfg_vars.values()
+                )
+                col_a, col_b, col_c, col_d = st.columns(4)
+                col_a.metric("Biến Độc lập (IV)", len(_iv))
+                col_b.metric("Biến Trung gian (M)", len(_mv))
+                col_c.metric("Biến Phụ thuộc (Y)", len(_dv))
+                col_d.metric("Tổng biến quan sát", _total_items)
+                if _iv: st.markdown("🔵 **IV:** " + "  |  ".join(_iv))
+                if _mv: st.markdown("🟡 **Mediator:** " + "  |  ".join(_mv))
+                if _dv: st.markdown("🔴 **DV:** " + "  |  ".join(_dv))
+
+            # Thông số sinh dữ liệu
+            c_n, c_m = st.columns(2)
+            with c_n:
+                sample_n = st.number_input("Số lượng mẫu (n)", 50, 2000, 250, step=50)
+            with c_m:
+                miss_rate = st.slider("Tỷ lệ thiếu (%)", 0, 30, 2)
+
+            gen_mode = st.radio(
+                "Chế độ sinh dữ liệu:",
+                options=["Realistic but Guaranteed to Pass EFA (Đạt EFA 100%)", "Fully Messy Real-world (Đời thực - EFA có thể không đạt)"],
+                help="Chế độ 'Đạt EFA 100%' tối ưu hóa các tham số để đảm bảo hệ số KMO cao và các nhân tố phân biệt rõ ràng. Chế độ 'Đời thực' sinh dữ liệu giống thực tế có tỷ lệ nhiễu và ngoại lai cao, có thể đòi hỏi loại bỏ một số biến quan sát hoặc sử dụng công cụ Smart-Smooth."
+            )
+
+            if st.button("🚀 Khởi tạo Dữ liệu Mẫu", use_container_width=True, type="primary"):
+                if _total_items == 0:
+                    st.error("❌ Các nhân tố trong cấu hình chưa có biến quan sát (items). Vui lòng kiểm tra lại cấu hình AI hoặc chỉnh sửa thủ công.")
+                else:
+                    efa_pass = (gen_mode == "Realistic but Guaranteed to Pass EFA (Đạt EFA 100%)")
+                    with st.spinner(f"Đang sinh {sample_n} mẫu theo cấu hình **{_cfg_title}**..."):
+                        st.session_state.raw_df = spss.generate_data(
+                            n=sample_n,
+                            missing_rate=miss_rate/100,
+                            efa_passing_guaranteed=efa_pass
+                        )
+                    st.session_state.df = st.session_state.raw_df.copy()
+                    st.session_state.is_cleaned = False
+                    st.session_state.results = None
+                    st.success(
+                        f"✅ Đã tạo **{sample_n} mẫu** theo đề tài **'{_cfg_title}'** "
+                        f"với **{_total_items} biến quan sát** – {miss_rate}% dữ liệu trống "
+                        f"({'Đạt EFA 100%' if efa_pass else 'Chế độ đời thực'})."
+                    )
+                    st.rerun()
 
     with tab_manual:
         st.info("Sử dụng hộp thoại chuyên dụng để nhập liệu chính xác từng phiếu khảo sát.")
@@ -2943,42 +3077,56 @@ elif menu_selection == "📥 Quản lý Dữ liệu":
         st.subheader("📈 Điều chỉnh Thủ công (Boost Alpha)")
         st.write("Tinh chỉnh sâu cho từng nhân tố cụ thể để 'cứu' các thang đo yếu.")
         
-        tune_var = st.selectbox("Chọn nhân tố:", list(spss.ACTIVE_CONFIG["variables"].keys()), key="tune_sel")
+        var_keys = list(spss.ACTIVE_CONFIG.get("variables", {}).keys())
+        if not var_keys:
+            st.info("ℹ️ Chưa có nhân tố nào. Vui lòng nhấn '✨ AI Đề xuất Cấu hình' trước.")
+            tune_var = None
+        else:
+            tune_var = st.selectbox("Chọn nhân tố:", var_keys, key="tune_sel")
         boost_val = st.slider("Mức độ tăng cường nhất quán", 0.0, 1.0, 0.3, help="Càng cao thì các biến trong nhân tố càng giống nhau -> Alpha càng cao.")
         
-        if st.button("🚀 Thực hiện Boost cho " + tune_var, use_container_width=True):
-            items = list(spss.ACTIVE_CONFIG["variables"][tune_var]["items"].keys())
-            df_t = st.session_state.df.copy()
-            scale_mean = df_t[items].mean(axis=1)
-            for col in items:
-                df_t[col] = (df_t[col] * (1-boost_val) + scale_mean * boost_val).round()
-                df_t[col] = df_t[col].astype(int)
-            
-            # Xác định trạng thái vi phạm cho Boost
-            boost_violation = "⚠️ Chấp nhận được (Tinh chỉnh nhẹ)" if boost_val < 0.3 else ("❌ Cảnh báo mạnh (Can thiệp hệ thống)" if boost_val < 0.6 else "🚫 Vi phạm nghiêm trọng (Ngụy tạo xu hướng)")
-            
-            # Ghi log boost chi tiết
-            new_logs = st.session_state.get('optimization_logs', [])
-            new_logs.append(f"🚀 **Hành động: Manual Alpha Boost (Tăng cường nhất quán nội tại)**")
-            new_logs.append(f"- **Thời gian:** {pd.Timestamp.now().strftime('%H:%M:%S %d/%m/%Y')}")
-            new_logs.append(f"- **Trạng thái Đạo đức:** {boost_violation}")
-            new_logs.append(f"- **Nhân tố điều chỉnh:** {tune_var} ({spss.ACTIVE_CONFIG['variables'][tune_var]['label']})")
-            new_logs.append(f"- **Các biến quan sát bị tác động:** {', '.join(items)}")
-            new_logs.append(f"- **Hệ số tăng cường ($\\alpha_{{boost}}$):** {boost_val} (Mức độ can thiệp: {'Thấp' if boost_val < 0.3 else 'Trung bình' if boost_val < 0.6 else 'Cao'})")
-            new_logs.append(f"- **Thuật toán:** Linear scale convergence towards factor mean.")
-            new_logs.append(r"- **Công thức:** $x_{new} = [x_{old} \times (1 - \alpha_{boost}) + \bar{X}_{scale} \times \alpha_{boost}]$")
-            new_logs.append("---")
-            new_logs.append(f"**Đánh giá Đạo đức & Vi phạm:** {boost_violation}. Đây là hình thức can thiệp dữ liệu chủ động để tăng độ tin cậy thang đo. Việc sử dụng hệ số $> 0.5$ có thể làm mất đi tính ngẫu nhiên tự nhiên của mẫu và bị coi là vi phạm quy tắc xử lý dữ liệu trung thực nếu không được khai báo minh bạch là bước 'Xử lý nhiễu hệ thống'.")
-            
-            # Ghi file log vật lý
-            log_audit_trail(new_logs)
-            
-            st.session_state.df = df_t
-            st.session_state.optimization_logs = new_logs
-            st.session_state.is_cleaned = True
-            st.session_state.results = None # Reset kết quả
-            st.success(f"Đã 'Boost' thành công cho {tune_var}!")
-            st.rerun()
+        if tune_var and st.button("🚀 Thực hiện Boost cho " + tune_var, use_container_width=True):
+            items_obj = spss.ACTIVE_CONFIG["variables"][tune_var].get("items", {})
+            if isinstance(items_obj, dict):
+                items = list(items_obj.keys())
+            elif isinstance(items_obj, list):
+                items = items_obj
+            else:
+                items = []
+            if not items:
+                st.warning(f"Nhân tố '{tune_var}' chưa có biến quan sát.")
+            else:
+                df_t = st.session_state.df.copy()
+                scale_mean = df_t[items].mean(axis=1)
+                for col in items:
+                    df_t[col] = (df_t[col] * (1-boost_val) + scale_mean * boost_val).round()
+                    df_t[col] = df_t[col].astype(int)
+                
+                # Xác định trạng thái vi phạm cho Boost
+                boost_violation = "⚠️ Chấp nhận được (Tinh chỉnh nhẹ)" if boost_val < 0.3 else ("❌ Cảnh báo mạnh (Can thiệp hệ thống)" if boost_val < 0.6 else "🚫 Vi phạm nghiêm trọng (Ngụy tạo xu hướng)")
+                
+                # Ghi log boost chi tiết
+                new_logs = st.session_state.get('optimization_logs', [])
+                new_logs.append(f"🚀 **Hành động: Manual Alpha Boost (Tăng cường nhất quán nội tại)**")
+                new_logs.append(f"- **Thời gian:** {pd.Timestamp.now().strftime('%H:%M:%S %d/%m/%Y')}")
+                new_logs.append(f"- **Trạng thái Đạo đức:** {boost_violation}")
+                new_logs.append(f"- **Nhân tố điều chỉnh:** {tune_var} ({spss.ACTIVE_CONFIG['variables'][tune_var]['label']})")
+                new_logs.append(f"- **Các biến quan sát bị tác động:** {', '.join(items)}")
+                new_logs.append(f"- **Hệ số tăng cường ($\\alpha_{{boost}}$):** {boost_val} (Mức độ can thiệp: {'Thấp' if boost_val < 0.3 else 'Trung bình' if boost_val < 0.6 else 'Cao'})")
+                new_logs.append(f"- **Thuật toán:** Linear scale convergence towards factor mean.")
+                new_logs.append(r"- **Công thức:** $x_{new} = [x_{old} \times (1 - \alpha_{boost}) + \bar{X}_{scale} \times \alpha_{boost}]$")
+                new_logs.append("---")
+                new_logs.append(f"**Đánh giá Đạo đức & Vi phạm:** {boost_violation}. Đây là hình thức can thiệp dữ liệu chủ động để tăng độ tin cậy thang đo. Việc sử dụng hệ số $> 0.5$ có thể làm mất đi tính ngẫu nhiên tự nhiên của mẫu và bị coi là vi phạm quy tắc xử lý dữ liệu trung thực nếu không được khai báo minh bạch là bước 'Xử lý nhiễu hệ thống'.")
+                
+                # Ghi file log vật lý
+                log_audit_trail(new_logs)
+                
+                st.session_state.df = df_t
+                st.session_state.optimization_logs = new_logs
+                st.session_state.is_cleaned = True
+                st.session_state.results = None # Reset kết quả
+                st.success(f"Đã 'Boost' thành công cho {tune_var}!")
+                st.rerun()
 
     st.markdown("---")
     st.subheader("📊 Bảng thống kê Thu thập (Nhân khẩu học)")
@@ -3108,20 +3256,37 @@ elif menu_selection == "📥 Quản lý Dữ liệu":
         
         # Biến thang đo Likert
         for var_code, v_info in spss.ACTIVE_CONFIG["variables"].items():
-            for item_code, item_label in v_info["items"].items():
-                var_view_rows.append({
-                    "Name": item_code,
-                    "Type": "Numeric",
-                    "Width": 8,
-                    "Decimals": 0,
-                    "Label": item_label,
-                    "Values": "{1, Rất KH; 5, Rất H}",
-                    "Missing": "None",
-                    "Columns": 8,
-                    "Align": "Right",
-                    "Measure": "Scale",
-                    "Role": "Input" if v_info["type"] != "dependent" else "Target"
-                })
+            items_obj = v_info.get('items', [])
+            if isinstance(items_obj, dict):
+                for item_code, item_label in items_obj.items():
+                    var_view_rows.append({
+                        "Name": item_code,
+                        "Type": "Numeric",
+                        "Width": 8,
+                        "Decimals": 0,
+                        "Label": item_label,
+                        "Values": "{1, Rất KH; 5, Rất H}",
+                        "Missing": "None",
+                        "Columns": 8,
+                        "Align": "Right",
+                        "Measure": "Scale",
+                        "Role": "Input" if v_info["type"] != "dependent" else "Target"
+                    })
+            elif isinstance(items_obj, list):
+                for item_code in items_obj:
+                    var_view_rows.append({
+                        "Name": item_code,
+                        "Type": "Numeric",
+                        "Width": 8,
+                        "Decimals": 0,
+                        "Label": item_code,
+                        "Values": "{1, Rất KH; 5, Rất H}",
+                        "Missing": "None",
+                        "Columns": 8,
+                        "Align": "Right",
+                        "Measure": "Scale",
+                        "Role": "Input" if v_info["type"] != "dependent" else "Target"
+                    })
         
         if var_view_rows:
             st.dataframe(pd.DataFrame(var_view_rows), use_container_width=True, hide_index=True)

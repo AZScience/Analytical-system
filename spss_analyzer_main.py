@@ -71,91 +71,18 @@ plt.rcParams.update({
 })
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  CẤU HÌNH MÔ HÌNH (từ đề án Phạm Phương Thảo – NTTU 2026)
+#  CẤU HÌNH MÔ HÌNH MẶC ĐỊNH – Trống, chờ AI hoặc người dùng điền vào
+#  (Không còn hard-code đề tài KTX hay bất kỳ đề tài cụ thể nào)
 # ─────────────────────────────────────────────────────────────────────────────
 MODEL_CONFIG = {
-    "title": "Giải pháp nâng cao sự hài lòng của sinh viên đối với công tác quản lý KTX",
-    "author": "Phạm Phương Thảo – NTTU 2026",
-    "variables": {
-        "CSVC": {
-            "label": "Cơ sở vật chất ký túc xá",
-            "type": "independent",
-            "color": C_BLUE,
-            "items": {
-                "CSVC1": "Phòng ở đáp ứng nhu cầu sinh hoạt của sinh viên",
-                "CSVC2": "Trang thiết bị trong phòng hoạt động tốt",
-                "CSVC3": "Hệ thống điện, nước hoạt động ổn định",
-                "CSVC4": "Khu vệ sinh bảo đảm điều kiện sử dụng",
-                "CSVC5": "Không gian sinh hoạt chung thuận tiện",
-            }
-        },
-        "AN": {
-            "label": "An ninh và an toàn ký túc xá",
-            "type": "independent",
-            "color": "#7c3aed",
-            "items": {
-                "AN1": "Cảm thấy an toàn khi sinh sống tại ký túc xá",
-                "AN2": "Công tác bảo vệ được thực hiện nghiêm túc",
-                "AN3": "Việc kiểm soát ra vào ký túc xá được thực hiện tốt",
-                "AN4": "Ký túc xá có biện pháp bảo đảm an toàn PCCC",
-            }
-        },
-        "HT": {
-            "label": "Dịch vụ hỗ trợ sinh viên",
-            "type": "independent",
-            "color": C_AMBER,
-            "items": {
-                "HT1": "Ban quản lý hỗ trợ sinh viên khi có yêu cầu",
-                "HT2": "Các yêu cầu của sinh viên được xử lý kịp thời",
-                "HT3": "Sinh viên dễ dàng liên hệ với Ban quản lý KTX",
-                "HT4": "Thông tin liên quan đến KTX được cung cấp đầy đủ",
-            }
-        },
-        "NV": {
-            "label": "Nhân viên quản lý ký túc xá",
-            "type": "independent",
-            "color": C_GREEN,
-            "items": {
-                "NV1": "Nhân viên quản lý có thái độ thân thiện",
-                "NV2": "Nhân viên làm việc có trách nhiệm",
-                "NV3": "Nhân viên có kỹ năng giao tiếp tốt",
-                "NV4": "Nhân viên hỗ trợ sinh viên một cách tận tình",
-            }
-        },
-        "CLDV": {
-            "label": "Chất lượng cảm nhận dịch vụ KTX",
-            "type": "mediator",
-            "color": "#0891b2",
-            "items": {
-                "CLDV1": "Chất lượng dịch vụ KTX đáp ứng nhu cầu của tôi",
-                "CLDV2": "Dịch vụ KTX có chất lượng tốt",
-                "CLDV3": "Dịch vụ KTX đáng tin cậy",
-                "CLDV4": "Chất lượng dịch vụ KTX nhìn chung là tốt",
-            }
-        },
-        "HL": {
-            "label": "Sự hài lòng của sinh viên nội trú",
-            "type": "dependent",
-            "color": C_RED,
-            "items": {
-                "HL1": "Hài lòng với điều kiện sống tại ký túc xá",
-                "HL2": "KTX đáp ứng kỳ vọng ban đầu của tôi",
-                "HL3": "Sẵn sàng tiếp tục sinh sống tại ký túc xá",
-                "HL4": "Sẽ giới thiệu KTX cho sinh viên khác",
-            }
-        },
-    },
-    "hypotheses": [
-        ("H1", "CSVC → CLDV", "Cơ sở vật chất ảnh hưởng (+) đến Chất lượng cảm nhận dịch vụ"),
-        ("H2", "AN → CLDV",   "An ninh – an toàn ảnh hưởng (+) đến Chất lượng cảm nhận dịch vụ"),
-        ("H3", "HT → CLDV",   "Dịch vụ hỗ trợ ảnh hưởng (+) đến Chất lượng cảm nhận dịch vụ"),
-        ("H4", "NV → CLDV",   "Nhân viên quản lý ảnh hưởng (+) đến Chất lượng cảm nhận dịch vụ"),
-        ("H5", "CLDV → HL",   "Chất lượng cảm nhận dịch vụ ảnh hưởng (+) đến Sự hài lòng"),
-    ],
-    "demographics": ["GioiTinh", "NamHoc", "ThoiGian"]
+    "title": "Chưa có đề tài – Vui lòng nhập mô tả và nhấn '✨ AI Đề xuất Cấu hình'",
+    "author": "Hệ thống",
+    "variables": {},
+    "hypotheses": [],
+    "demographics": []
 }
 
-# Biến toàn cục để lưu cấu hình hiện tại (có thể được ghi đè bởi phát hiện tự động)
+# Biến toàn cục để lưu cấu hình hiện tại (được ghi đè khi AI đề xuất hoặc người dùng nạp file)
 ACTIVE_CONFIG = MODEL_CONFIG.copy()
 
 def discover_model_config(df):
@@ -229,8 +156,8 @@ def discover_model_config(df):
             h_idx += 1
             
     ACTIVE_CONFIG = {
-        "title": "Dự án phân tích tự động",
-        "author": "AI Assistant",
+        "title": ACTIVE_CONFIG.get("title", "Dự án phân tích tự động từ file"),
+        "author": ACTIVE_CONFIG.get("author", "AI Assistant"),
         "variables": new_vars,
         "hypotheses": new_hyps,
         "demographics": demographics
@@ -345,7 +272,7 @@ def _generate_raw_data(n, seed, missing_rate, efa_passing_guaranteed, force_clea
 
     # 3. Tạo dữ liệu mẫu
     data = {}
-    data["ID"] = [f"SV{str(i+1).zfill(3)}" for i in range(n)]
+    data["ID"] = [f"RES{str(i+1).zfill(3)}" for i in range(n)]
 
     # Sinh các biến nhân khẩu học động
     demos = ACTIVE_CONFIG.get("demographics", [])
@@ -382,7 +309,13 @@ def _generate_raw_data(n, seed, missing_rate, efa_passing_guaranteed, force_clea
 
     for var_code, lat in latents.items():
         if var_code in cfg:
-            items = cfg[var_code]["items"]
+            items_obj = cfg[var_code].get('items', [])
+            if isinstance(items_obj, dict):
+                items = list(items_obj.keys())
+            elif isinstance(items_obj, list):
+                items = items_obj
+            else:
+                items = []
             for j, item_code in enumerate(items):
                 jitter = rng.normal(0, jitter_std)  # item-level offset
                 vals = to_likert(lat + jitter, noise=noise_val)
@@ -403,7 +336,12 @@ def _generate_raw_data(n, seed, missing_rate, efa_passing_guaranteed, force_clea
             survey_cols = []
             for var_code in latents.keys():
                 if var_code in cfg:
-                    survey_cols.extend(list(cfg[var_code]["items"].keys()))
+                    # Safely get item codes for outlier columns
+                    items_obj = cfg[var_code].get('items', [])
+                    if isinstance(items_obj, dict):
+                        survey_cols.extend(list(items_obj.keys()))
+                    elif isinstance(items_obj, list):
+                        survey_cols.extend(items_obj)
                 
             for idx in outlier_indices:
                 outlier_type = rng.choice(["all_5", "all_1", "random"])
@@ -423,8 +361,16 @@ def _verify_data_quality(df):
     all_items = []
     
     for var_code in ind_vars:
-        items = list(cfg[var_code]["items"].keys())
+        # Get item codes safely whether items is a dict or list
+        items_obj = cfg[var_code].get('items', [])
+        if isinstance(items_obj, dict):
+            items = list(items_obj.keys())
+        elif isinstance(items_obj, list):
+            items = items_obj
+        else:
+            items = []
         all_items.extend(items)
+# Removed duplicate extend to avoid redundancy
         
         # Kiểm tra Cronbach Alpha
         c_res = cronbach_alpha(df[items].dropna().values)
@@ -440,9 +386,8 @@ def _verify_data_quality(df):
                 
     # Kiểm tra KMO và Bartlett
     df_efa = df[all_items].copy()
-    for col in df_efa.columns:
-        if df_efa[col].isna().any():
-            df_efa[col] = df_efa[col].fillna(df_efa[col].mean())
+    # Fill missing values with column means (numeric) safely
+    df_efa = df_efa.apply(lambda s: s.fillna(s.mean()) if s.dtype.kind in 'biufc' else s)
     df_efa = df_efa.dropna()
     
     if df_efa.empty:
