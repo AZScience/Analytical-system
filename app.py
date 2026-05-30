@@ -949,7 +949,9 @@ Chỉ trả về DUY NHẤT một đối tượng JSON với cấu trúc chính 
         json_match = re.search(r'\{.*\}', result_text, re.DOTALL)
         if json_match:
             parsed_json = json.loads(json_match.group(0))
-            if "explanation" in parsed_json and "roadmap" in parsed_json:
+            if "explanation" in parsed_json:
+                # ÉP BUỘC roadmap phải lấy từ ROADMAP_AI tĩnh để tránh AI sinh ảo
+                parsed_json["roadmap"] = fallback_roadmap
                 return parsed_json
             
     except Exception as e:
@@ -3285,6 +3287,15 @@ elif menu_selection in current_roadmap:
             render_scientific_conclusion("ttest_anova", groups)
         else:
             st.warning("Chưa thực hiện kiểm định nhóm.")
+
+    # Phân tích trung gian (Mediation)
+    if any(k in step_lower for k in ["trung gian", "mediation", "model 4", "gián tiếp", "sobel", "cơ chế"]):
+        results_shown = True
+        st.markdown("### 🧬 Phân tích Cơ chế Tác động trung gian (Mediation Model 4)")
+        if mediation:
+            render_scientific_conclusion("mediation", mediation)
+        else:
+            st.warning("Chưa có kết quả phân tích tác động trung gian.")
 
     # 6. Biểu đồ
     if any(k in step_lower for k in ["biểu đồ", "chart", "📊"]):
