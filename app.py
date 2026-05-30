@@ -200,325 +200,78 @@ PROBLEMS_AI = {
 
 ROADMAP_AI = {
     "descriptive": {
-        "undergraduate": [
-            "📌 Bước 1: Làm sạch dữ liệu & Xử lý giá trị thiếu (Missing values)",
-            "📌 Bước 2: Tính toán Tần số (Frequency) & Tỷ lệ (%) cho biến định danh",
-            "📌 Bước 3: Tính toán Trung bình (Mean) & Độ lệch chuẩn (Std.Dev) cho biến định lượng",
-            "📊 Biểu đồ: Biểu đồ cột (Bar Chart), Biểu đồ tròn (Pie Chart)"
-        ],
-        "master": [
-            "📌 Bước 1: Kiểm định tính phân phối chuẩn (Normality Test - Skewness/Kurtosis)",
-            "📌 Bước 2: Thống kê mô tả nâng cao (Median, Mode, Quartiles)",
-            "📌 Bước 3: Phân tích biến động (Coefficient of Variation - CV)",
-            "📊 Biểu đồ: Box Plot (Phát hiện ngoại lai), Biểu đồ Histogram có đường chuẩn"
-        ],
-        "phd": [
-            "📌 Bước 1: Phân tích đặc điểm mẫu chuyên sâu (Deep Profile Analysis)",
-            "📌 Bước 2: Kiểm định tính đại diện của mẫu (Sampling Representativeness)",
-            "📌 Bước 3: Phân tích trọng số (Weighting) để điều chỉnh sai lệch mẫu",
-            "📊 Biểu đồ: Ma trận mật độ (Density Matrix), Biểu đồ Radar đa chiều"
-        ],
-        "academic": [
-            "📌 Bước 1: Chuẩn hóa dữ liệu theo chuẩn báo cáo quốc tế (APA/AMA)",
-            "📌 Bước 2: Phân tích so sánh đặc điểm mẫu đa quốc gia/đa khu vực",
-            "📌 Bước 3: Kiểm định tính ổn định của dữ liệu theo thời gian (Stationarity)",
-            "📊 Biểu đồ: Heatmap phân bố dữ liệu diện rộng, Sơ đồ cấu trúc mẫu"
-        ]
+        "undergraduate": ["📌 Bước 1: Thống kê mô tả đặc điểm mẫu & Tần số (Descriptive)", "📌 Bước 2: Kiểm định Độ tin cậy thang đo (Cronbach's Alpha)", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy tuyến tính (OLS Regression) đánh giá tác động"],
+        "master": ["📌 Bước 1: Thống kê mô tả (Descriptive) & Làm sạch dữ liệu", "📌 Bước 2: Kiểm định Độ tin cậy (Cronbach's Alpha)", "📌 Bước 3: Phân tích Nhân tố khám phá (EFA) & KMO", "📌 Bước 4: Phân tích Tương quan (Correlation) & Đa cộng tuyến", "📌 Bước 5: Phân tích Hồi quy (Regression) & Kiểm định giả định", "📌 Bước 6: Kiểm định sự khác biệt nhóm (T-test/ANOVA)"],
+        "phd": ["📌 Bước 1: Thống kê mô tả chuyên sâu (Descriptive)", "📌 Bước 2: Kiểm định thang đo (Cronbach's Alpha) & EFA", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy OLS đa biến (Regression)", "📌 Bước 5: Phân tích cơ chế tác động trung gian (Mediation Model 4)", "📌 Bước 6: Kiểm định sự khác biệt đặc điểm nhân khẩu học (ANOVA/T-test)"],
+        "academic": ["📌 Bước 1: Đặc điểm mẫu & Thống kê mô tả (Descriptive)", "📌 Bước 2: Độ tin cậy (Cronbach) & Phân tích Nhân tố (EFA)", "📌 Bước 3: Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy đa biến OLS (Regression)", "📌 Bước 5: Tác động gián tiếp / Trung gian (Mediation)", "📌 Bước 6: Phân tích sai biệt nhóm (T-test/ANOVA)"]
     },
     "diagnostic": {
-        "undergraduate": [
-            "📌 Bước 1: Phân tích tương quan đơn giản (Correlation)",
-            "📌 Bước 2: Đối chiếu thực trạng với tiêu chuẩn/kế hoạch",
-            "📌 Bước 3: Xác định các nguyên nhân tiềm năng qua thống kê",
-            "📊 Biểu đồ: Đồ thị xương cá (Ishikawa), Biểu đồ Pareto"
-        ],
-        "master": [
-            "📌 Bước 1: Phân tích tương quan Pearson & Spearman",
-            "📌 Bước 2: Phân tích hồi quy chẩn đoán (Diagnostic Regression)",
-            "📌 Bước 3: Kiểm định sự khác biệt giữa các nhóm nguyên nhân (T-test/ANOVA)",
-            "📊 Biểu đồ: Ma trận tương quan (Heatmap), Biểu đồ phân tán (Scatter)"
-        ],
-        "phd": [
-            "📌 Bước 1: Mô hình hóa cấu trúc nguyên nhân (Path Analysis)",
-            "📌 Bước 2: Phân tích tác động trực tiếp & gián tiếp",
-            "📌 Bước 3: Kiểm định tính nội sinh (Endogeneity) trong quan hệ nhân quả",
-            "📊 Biểu đồ: Sơ đồ mạng lưới nhân quả, Path Diagram"
-        ],
-        "academic": [
-            "📌 Bước 1: Phân tích Counterfactual (Phản thực nghiệm)",
-            "📌 Bước 2: Mô hình hóa phương trình cấu trúc (SEM) để chẩn đoán hệ thống",
-            "📌 Bước 3: Phân tích độ nhạy (Sensitivity Analysis)",
-            "📊 Biểu đồ: Directed Acyclic Graphs (DAGs), Sơ đồ mô phỏng hệ thống"
-        ]
+        "undergraduate": ["📌 Bước 1: Thống kê mô tả đặc điểm mẫu & Tần số (Descriptive)", "📌 Bước 2: Kiểm định Độ tin cậy thang đo (Cronbach's Alpha)", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy tuyến tính (OLS Regression) đánh giá tác động"],
+        "master": ["📌 Bước 1: Thống kê mô tả (Descriptive) & Làm sạch dữ liệu", "📌 Bước 2: Kiểm định Độ tin cậy (Cronbach's Alpha)", "📌 Bước 3: Phân tích Nhân tố khám phá (EFA) & KMO", "📌 Bước 4: Phân tích Tương quan (Correlation) & Đa cộng tuyến", "📌 Bước 5: Phân tích Hồi quy (Regression) & Kiểm định giả định", "📌 Bước 6: Kiểm định sự khác biệt nhóm (T-test/ANOVA)"],
+        "phd": ["📌 Bước 1: Thống kê mô tả chuyên sâu (Descriptive)", "📌 Bước 2: Kiểm định thang đo (Cronbach's Alpha) & EFA", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy OLS đa biến (Regression)", "📌 Bước 5: Phân tích cơ chế tác động trung gian (Mediation Model 4)", "📌 Bước 6: Kiểm định sự khác biệt đặc điểm nhân khẩu học (ANOVA/T-test)"],
+        "academic": ["📌 Bước 1: Đặc điểm mẫu & Thống kê mô tả (Descriptive)", "📌 Bước 2: Độ tin cậy (Cronbach) & Phân tích Nhân tố (EFA)", "📌 Bước 3: Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy đa biến OLS (Regression)", "📌 Bước 5: Tác động gián tiếp / Trung gian (Mediation)", "📌 Bước 6: Phân tích sai biệt nhóm (T-test/ANOVA)"]
     },
     "predictive": {
-        "undergraduate": [
-            "📌 Bước 1: Thu thập & Chuẩn hóa dữ liệu chuỗi thời gian",
-            "📌 Bước 2: Phân tích xu hướng (Trend Analysis)",
-            "📌 Bước 3: Dự báo bằng phương pháp trung bình động (Moving Average)",
-            "📊 Biểu đồ: Biểu đồ đường (Line Chart) có trendline"
-        ],
-        "master": [
-            "📌 Bước 1: Kiểm định tính dừng của chuỗi dữ liệu (ADF Test)",
-            "📌 Bước 2: Xây dựng mô hình ARIMA / Holt-Winters",
-            "📌 Bước 3: Đánh giá sai số dự báo (MAE, RMSE, MAPE)",
-            "📊 Biểu đồ: Biểu đồ dự báo có khoảng tin cậy (Confidence Interval)"
-        ],
-        "phd": [
-            "📌 Bước 1: Xây dựng mô hình hồi quy Logistic / Probit cho dự báo phân loại",
-            "📌 Bước 2: Kiểm định tính chính xác qua ma trận nhầm lẫn (Confusion Matrix)",
-            "📌 Bước 3: Phân tích đường cong ROC & chỉ số AUC",
-            "📊 Biểu đồ: ROC Curve, Biểu đồ tầm quan trọng của biến (Feature Importance)"
-        ],
-        "academic": [
-            "📌 Bước 1: Ứng dụng mô hình Ensemble (Random Forest, XGBoost) hoặc Deep Learning",
-            "📌 Bước 2: Kiểm định tính ổn định mô hình qua Cross-validation",
-            "📌 Bước 3: Phân tích Bayesian để cập nhật xác suất dự báo",
-            "📊 Biểu đồ: Neural Network Architecture Diagram, SHAP Value Plot"
-        ]
+        "undergraduate": ["📌 Bước 1: Thống kê mô tả đặc điểm mẫu & Tần số (Descriptive)", "📌 Bước 2: Kiểm định Độ tin cậy thang đo (Cronbach's Alpha)", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy tuyến tính (OLS Regression) đánh giá tác động"],
+        "master": ["📌 Bước 1: Thống kê mô tả (Descriptive) & Làm sạch dữ liệu", "📌 Bước 2: Kiểm định Độ tin cậy (Cronbach's Alpha)", "📌 Bước 3: Phân tích Nhân tố khám phá (EFA) & KMO", "📌 Bước 4: Phân tích Tương quan (Correlation) & Đa cộng tuyến", "📌 Bước 5: Phân tích Hồi quy (Regression) & Kiểm định giả định", "📌 Bước 6: Kiểm định sự khác biệt nhóm (T-test/ANOVA)"],
+        "phd": ["📌 Bước 1: Thống kê mô tả chuyên sâu (Descriptive)", "📌 Bước 2: Kiểm định thang đo (Cronbach's Alpha) & EFA", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy OLS đa biến (Regression)", "📌 Bước 5: Phân tích cơ chế tác động trung gian (Mediation Model 4)", "📌 Bước 6: Kiểm định sự khác biệt đặc điểm nhân khẩu học (ANOVA/T-test)"],
+        "academic": ["📌 Bước 1: Đặc điểm mẫu & Thống kê mô tả (Descriptive)", "📌 Bước 2: Độ tin cậy (Cronbach) & Phân tích Nhân tố (EFA)", "📌 Bước 3: Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy đa biến OLS (Regression)", "📌 Bước 5: Tác động gián tiếp / Trung gian (Mediation)", "📌 Bước 6: Phân tích sai biệt nhóm (T-test/ANOVA)"]
     },
     "prescriptive": {
-        "undergraduate": [
-            "📌 Bước 1: Phân tích các kịch bản 'Nếu - Thì' (What-if Analysis)",
-            "📌 Bước 2: Đánh giá tính khả thi của các phương án đề xuất",
-            "📌 Bước 3: Lập danh mục ưu tiên các giải pháp cải thiện",
-            "📊 Biểu đồ: Sơ đồ luồng quyết định (Decision Flowchart)"
-        ],
-        "master": [
-            "📌 Bước 1: Xây dựng mô hình tối ưu hóa nguồn lực (Linear Programming)",
-            "📌 Bước 2: Phân tích độ nhạy của giải pháp đối với biến động thị trường",
-            "📌 Bước 3: Đánh giá hiệu quả kinh tế (ROI, Payback Period) của giải pháp",
-            "📊 Biểu đồ: Tornado Plot, Biểu đồ phân tích điểm hòa vốn"
-        ],
-        "phd": [
-            "📌 Bước 1: Mô phỏng Monte Carlo để đánh giá rủi ro của các quyết định",
-            "📌 Bước 2: Xây dựng mô hình ra quyết định đa tiêu chí (AHP/TOPSIS)",
-            "📌 Bước 3: Tối ưu hóa đa mục tiêu (Multi-objective Optimization)",
-            "📊 Biểu đồ: Sơ đồ phân tích kịch bản phức hợp, Pareto Frontier"
-        ],
-        "academic": [
-            "📌 Bước 1: Xây dựng lý thuyết trò chơi (Game Theory) trong ra quyết định",
-            "📌 Bước 2: Mô hình hóa hệ thống động (System Dynamics)",
-            "📌 Bước 3: Đề xuất khung chính sách dựa trên bằng chứng thực nghiệm",
-            "📊 Biểu đồ: Sơ đồ tương tác hệ thống phức hợp, Simulation Animation"
-        ]
+        "undergraduate": ["📌 Bước 1: Thống kê mô tả đặc điểm mẫu & Tần số (Descriptive)", "📌 Bước 2: Kiểm định Độ tin cậy thang đo (Cronbach's Alpha)", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy tuyến tính (OLS Regression) đánh giá tác động"],
+        "master": ["📌 Bước 1: Thống kê mô tả (Descriptive) & Làm sạch dữ liệu", "📌 Bước 2: Kiểm định Độ tin cậy (Cronbach's Alpha)", "📌 Bước 3: Phân tích Nhân tố khám phá (EFA) & KMO", "📌 Bước 4: Phân tích Tương quan (Correlation) & Đa cộng tuyến", "📌 Bước 5: Phân tích Hồi quy (Regression) & Kiểm định giả định", "📌 Bước 6: Kiểm định sự khác biệt nhóm (T-test/ANOVA)"],
+        "phd": ["📌 Bước 1: Thống kê mô tả chuyên sâu (Descriptive)", "📌 Bước 2: Kiểm định thang đo (Cronbach's Alpha) & EFA", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy OLS đa biến (Regression)", "📌 Bước 5: Phân tích cơ chế tác động trung gian (Mediation Model 4)", "📌 Bước 6: Kiểm định sự khác biệt đặc điểm nhân khẩu học (ANOVA/T-test)"],
+        "academic": ["📌 Bước 1: Đặc điểm mẫu & Thống kê mô tả (Descriptive)", "📌 Bước 2: Độ tin cậy (Cronbach) & Phân tích Nhân tố (EFA)", "📌 Bước 3: Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy đa biến OLS (Regression)", "📌 Bước 5: Tác động gián tiếp / Trung gian (Mediation)", "📌 Bước 6: Phân tích sai biệt nhóm (T-test/ANOVA)"]
     },
     "finance": {
-        "undergraduate": [
-            "📌 Bước 1: Phân tích các tỷ số tài chính (Liquidity, Solvency, Profitability)",
-            "📌 Bước 2: Phân tích ngang & dọc báo cáo tài chính",
-            "📌 Bước 3: Phân tích hòa vốn (Break-even Analysis)",
-            "📊 Biểu đồ: Biểu đồ Waterfall (Dòng tiền), Biểu đồ cột chồng"
-        ],
-        "master": [
-            "📌 Bước 1: Định giá doanh nghiệp/dự án (DCF Model, WACC)",
-            "📌 Bước 2: Phân tích độ nhạy của NPV/IRR theo các biến đầu vào",
-            "📌 Bước 3: Đánh giá rủi ro tài chính qua chỉ số Beta",
-            "📊 Biểu đồ: Radar Chart sức khỏe tài chính, Biểu đồ nến giá"
-        ],
-        "phd": [
-            "📌 Bước 1: Phân tích chuỗi thời gian tài chính nâng cao (GARCH, VAR)",
-            "📌 Bước 2: Tính toán giá trị rủi ro (VaR - Value at Risk)",
-            "📌 Bước 3: Kiểm định các lý thuyết tài chính (EMH, CAPM)",
-            "📊 Biểu đồ: Volatility Surface Chart, Biểu đồ Risk Matrix"
-        ],
-        "academic": [
-            "📌 Bước 1: Mô hình hóa kinh tế lượng tài chính phức hợp",
-            "📌 Bước 2: Phân tích tác động lan tỏa (Spillover effects)",
-            "📌 Bước 3: Nghiên cứu tài chính hành vi qua thực nghiệm",
-            "📊 Biểu đồ: Efficient Frontier, Sơ đồ mạng lưới tài chính"
-        ]
+        "undergraduate": ["📌 Bước 1: Thống kê mô tả đặc điểm mẫu & Tần số (Descriptive)", "📌 Bước 2: Kiểm định Độ tin cậy thang đo (Cronbach's Alpha)", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy tuyến tính (OLS Regression) đánh giá tác động"],
+        "master": ["📌 Bước 1: Thống kê mô tả (Descriptive) & Làm sạch dữ liệu", "📌 Bước 2: Kiểm định Độ tin cậy (Cronbach's Alpha)", "📌 Bước 3: Phân tích Nhân tố khám phá (EFA) & KMO", "📌 Bước 4: Phân tích Tương quan (Correlation) & Đa cộng tuyến", "📌 Bước 5: Phân tích Hồi quy (Regression) & Kiểm định giả định", "📌 Bước 6: Kiểm định sự khác biệt nhóm (T-test/ANOVA)"],
+        "phd": ["📌 Bước 1: Thống kê mô tả chuyên sâu (Descriptive)", "📌 Bước 2: Kiểm định thang đo (Cronbach's Alpha) & EFA", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy OLS đa biến (Regression)", "📌 Bước 5: Phân tích cơ chế tác động trung gian (Mediation Model 4)", "📌 Bước 6: Kiểm định sự khác biệt đặc điểm nhân khẩu học (ANOVA/T-test)"],
+        "academic": ["📌 Bước 1: Đặc điểm mẫu & Thống kê mô tả (Descriptive)", "📌 Bước 2: Độ tin cậy (Cronbach) & Phân tích Nhân tố (EFA)", "📌 Bước 3: Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy đa biến OLS (Regression)", "📌 Bước 5: Tác động gián tiếp / Trung gian (Mediation)", "📌 Bước 6: Phân tích sai biệt nhóm (T-test/ANOVA)"]
     },
     "ops": {
-        "undergraduate": [
-            "📌 Bước 1: Sơ đồ hóa quy trình hiện tại (As-is Process Map)",
-            "📌 Bước 2: Đo lường thời gian chu kỳ (Cycle Time) & Năng suất",
-            "📌 Bước 3: Xác định các điểm nghẽn (Bottlenecks) cơ bản",
-            "📊 Biểu đồ: Sơ đồ luồng (Flowchart), Biểu đồ Gantt"
-        ],
-        "master": [
-            "📌 Bước 1: Phân tích chuỗi giá trị (Value Stream Mapping - VSM)",
-            "📌 Bước 2: Tính toán hiệu suất tổng thể thiết bị (OEE)",
-            "📌 Bước 3: Áp dụng các công cụ Lean/Six Sigma (DMAIC)",
-            "📊 Biểu đồ: VSM Current/Future State, Biểu đồ kiểm soát (Control Chart)"
-        ],
-        "phd": [
-            "📌 Bước 1: Mô phỏng hệ thống vận hành (Discrete Event Simulation)",
-            "📌 Bước 2: Tối ưu hóa chuỗi cung ứng diện rộng (Supply Chain Network Opt)",
-            "📌 Bước 3: Kiểm định độ tin cậy hệ thống (System Reliability)",
-            "📊 Biểu đồ: Sơ đồ mạng lưới logistics, Petri Nets"
-        ],
-        "academic": [
-            "📌 Bước 1: Nghiên cứu chiến lược vận hành bền vững (Circular Economy)",
-            "📌 Bước 2: Ứng dụng AI/IoT trong tối ưu hóa vận hành",
-            "📌 Bước 3: Mô hình hóa tương tác giữa các tác nhân trong chuỗi giá trị",
-            "📊 Biểu đồ: 3D Simulation Visualization, Dynamic Dashboard"
-        ]
+        "undergraduate": ["📌 Bước 1: Thống kê mô tả đặc điểm mẫu & Tần số (Descriptive)", "📌 Bước 2: Kiểm định Độ tin cậy thang đo (Cronbach's Alpha)", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy tuyến tính (OLS Regression) đánh giá tác động"],
+        "master": ["📌 Bước 1: Thống kê mô tả (Descriptive) & Làm sạch dữ liệu", "📌 Bước 2: Kiểm định Độ tin cậy (Cronbach's Alpha)", "📌 Bước 3: Phân tích Nhân tố khám phá (EFA) & KMO", "📌 Bước 4: Phân tích Tương quan (Correlation) & Đa cộng tuyến", "📌 Bước 5: Phân tích Hồi quy (Regression) & Kiểm định giả định", "📌 Bước 6: Kiểm định sự khác biệt nhóm (T-test/ANOVA)"],
+        "phd": ["📌 Bước 1: Thống kê mô tả chuyên sâu (Descriptive)", "📌 Bước 2: Kiểm định thang đo (Cronbach's Alpha) & EFA", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy OLS đa biến (Regression)", "📌 Bước 5: Phân tích cơ chế tác động trung gian (Mediation Model 4)", "📌 Bước 6: Kiểm định sự khác biệt đặc điểm nhân khẩu học (ANOVA/T-test)"],
+        "academic": ["📌 Bước 1: Đặc điểm mẫu & Thống kê mô tả (Descriptive)", "📌 Bước 2: Độ tin cậy (Cronbach) & Phân tích Nhân tố (EFA)", "📌 Bước 3: Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy đa biến OLS (Regression)", "📌 Bước 5: Tác động gián tiếp / Trung gian (Mediation)", "📌 Bước 6: Phân tích sai biệt nhóm (T-test/ANOVA)"]
     },
     "marketing": {
-        "undergraduate": [
-            "📌 Bước 1: Thống kê mô tả đặc điểm khách hàng",
-            "📌 Bước 2: Phân tích thị phần & NPS",
-            "📌 Bước 3: Phân tích ma trận SWOT Marketing",
-            "📊 Biểu đồ: Biểu đồ phễu (Funnel), Bản đồ Customer Persona"
-        ],
-        "master": [
-            "📌 Bước 1: Phân tích phân khúc thị trường (Segmentation - Cluster Analysis)",
-            "📌 Bước 2: Xây dựng bản đồ định vị (Perceptual Mapping)",
-            "📌 Bước 3: Phân tích giá trị vòng đời khách hàng (CLV)",
-            "📊 Biểu đồ: Customer Journey Map, Đồ thị phân cụm"
-        ],
-        "phd": [
-            "📌 Bước 1: Mô hình hóa hành vi người tiêu dùng (CB Model)",
-            "📌 Bước 2: Kiểm định thực nghiệm Marketing (Field Experiment)",
-            "📌 Bước 3: Phân tích tác động của thương hiệu (Brand Equity Modeling)",
-            "📊 Biểu đồ: Sơ đồ Path Analysis hành vi, Heatmap tương tác"
-        ],
-        "academic": [
-            "📌 Bước 1: Phân tích Neuromarketing & Phản ứng sinh lý",
-            "📌 Bước 2: Phân tích mạng lưới xã hội (Social Network Analysis)",
-            "📌 Bước 3: Mô hình hóa Marketing hỗn hợp (MMM) phức hợp",
-            "📊 Biểu đồ: Brand Resonance Pyramid, Social Network Graph"
-        ]
+        "undergraduate": ["📌 Bước 1: Thống kê mô tả đặc điểm mẫu & Tần số (Descriptive)", "📌 Bước 2: Kiểm định Độ tin cậy thang đo (Cronbach's Alpha)", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy tuyến tính (OLS Regression) đánh giá tác động"],
+        "master": ["📌 Bước 1: Thống kê mô tả (Descriptive) & Làm sạch dữ liệu", "📌 Bước 2: Kiểm định Độ tin cậy (Cronbach's Alpha)", "📌 Bước 3: Phân tích Nhân tố khám phá (EFA) & KMO", "📌 Bước 4: Phân tích Tương quan (Correlation) & Đa cộng tuyến", "📌 Bước 5: Phân tích Hồi quy (Regression) & Kiểm định giả định", "📌 Bước 6: Kiểm định sự khác biệt nhóm (T-test/ANOVA)"],
+        "phd": ["📌 Bước 1: Thống kê mô tả chuyên sâu (Descriptive)", "📌 Bước 2: Kiểm định thang đo (Cronbach's Alpha) & EFA", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy OLS đa biến (Regression)", "📌 Bước 5: Phân tích cơ chế tác động trung gian (Mediation Model 4)", "📌 Bước 6: Kiểm định sự khác biệt đặc điểm nhân khẩu học (ANOVA/T-test)"],
+        "academic": ["📌 Bước 1: Đặc điểm mẫu & Thống kê mô tả (Descriptive)", "📌 Bước 2: Độ tin cậy (Cronbach) & Phân tích Nhân tố (EFA)", "📌 Bước 3: Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy đa biến OLS (Regression)", "📌 Bước 5: Tác động gián tiếp / Trung gian (Mediation)", "📌 Bước 6: Phân tích sai biệt nhóm (T-test/ANOVA)"]
     },
     "hr": {
-        "undergraduate": [
-            "📌 Bước 1: Thống kê tỷ lệ nghỉ việc & vắng mặt",
-            "📌 Bước 2: Khảo sát mức độ hài lòng nhân viên cơ bản",
-            "📌 Bước 3: Mô tả cơ cấu tổ chức hiện tại",
-            "📊 Biểu đồ: Tháp dân số nhân sự, Sơ đồ tổ chức"
-        ],
-        "master": [
-            "📌 Bước 1: Phân tích chỉ số gắn kết nhân viên (Engagement Index)",
-            "📌 Bước 2: Xây dựng khung năng lực (Competency Framework)",
-            "📌 Bước 3: Phân tích ROI của hoạt động đào tạo",
-            "📊 Biểu đồ: Ma trận 9-Box, Đồ thị mạng lưới nội bộ"
-        ],
-        "phd": [
-            "📌 Bước 1: Mô hình hóa tác động của văn hóa tổ chức lên hiệu suất",
-            "📌 Bước 2: Phân tích tâm lý tổ chức & Cam kết gắn bó",
-            "📌 Bước 3: Kiểm định các mô hình lãnh đạo (Leadership Modeling)",
-            "📊 Biểu đồ: Path Diagram nhân sự, Sơ đồ cấu trúc văn hóa"
-        ],
-        "academic": [
-            "📌 Bước 1: Nghiên cứu quản trị nhân sự chiến lược (SHRM)",
-            "📌 Bước 2: Phân tích đa cấp trong quản trị nhân sự",
-            "📌 Bước 3: Đánh giá tác động của công nghệ lên tương lai việc làm",
-            "📊 Biểu đồ: Leadership Impact Map, Diversity Dashboard"
-        ]
+        "undergraduate": ["📌 Bước 1: Thống kê mô tả đặc điểm mẫu & Tần số (Descriptive)", "📌 Bước 2: Kiểm định Độ tin cậy thang đo (Cronbach's Alpha)", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy tuyến tính (OLS Regression) đánh giá tác động"],
+        "master": ["📌 Bước 1: Thống kê mô tả (Descriptive) & Làm sạch dữ liệu", "📌 Bước 2: Kiểm định Độ tin cậy (Cronbach's Alpha)", "📌 Bước 3: Phân tích Nhân tố khám phá (EFA) & KMO", "📌 Bước 4: Phân tích Tương quan (Correlation) & Đa cộng tuyến", "📌 Bước 5: Phân tích Hồi quy (Regression) & Kiểm định giả định", "📌 Bước 6: Kiểm định sự khác biệt nhóm (T-test/ANOVA)"],
+        "phd": ["📌 Bước 1: Thống kê mô tả chuyên sâu (Descriptive)", "📌 Bước 2: Kiểm định thang đo (Cronbach's Alpha) & EFA", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy OLS đa biến (Regression)", "📌 Bước 5: Phân tích cơ chế tác động trung gian (Mediation Model 4)", "📌 Bước 6: Kiểm định sự khác biệt đặc điểm nhân khẩu học (ANOVA/T-test)"],
+        "academic": ["📌 Bước 1: Đặc điểm mẫu & Thống kê mô tả (Descriptive)", "📌 Bước 2: Độ tin cậy (Cronbach) & Phân tích Nhân tố (EFA)", "📌 Bước 3: Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy đa biến OLS (Regression)", "📌 Bước 5: Tác động gián tiếp / Trung gian (Mediation)", "📌 Bước 6: Phân tích sai biệt nhóm (T-test/ANOVA)"]
     },
     "reliability": {
-        "undergraduate": [
-            "📌 Bước 1: Kiểm định Cronbach's Alpha (> 0.7)",
-            "📌 Bước 2: Kiểm tra hệ số tương quan biến tổng (Corrected Item-Total > 0.3)",
-            "📌 Bước 3: Loại bỏ các biến không phù hợp để tăng độ tin cậy",
-            "📊 Biểu đồ: Biểu đồ thanh độ tin cậy từng biến"
-        ],
-        "master": [
-            "📌 Bước 1: Kiểm định độ tin cậy nâng cao (Split-half, Guttman)",
-            "📌 Bước 2: Phân tích tính đơn hướng (Unidimensionality)",
-            "📌 Bước 3: Đánh giá độ ổn định qua Test-retest",
-            "📊 Biểu đồ: ITC Profile Chart, Sơ đồ cấu trúc thang đo"
-        ],
-        "phd": [
-            "📌 Bước 1: Tính toán độ tin cậy tổng hợp (Composite Reliability - CR)",
-            "📌 Bước 2: Tính toán phương sai trích trung bình (AVE)",
-            "📌 Bước 3: Kiểm định giá trị hội tụ & phân biệt",
-            "📊 Biểu đồ: Sơ đồ kiểm định Fornell-Larcker"
-        ],
-        "academic": [
-            "📌 Bước 1: Ứng dụng lý thuyết đáp ứng câu hỏi (IRT)",
-            "📌 Bước 2: Tính toán độ tin cậy Bayesian (Omega)",
-            "📌 Bước 3: Kiểm định tính bất biến đo lường (Measurement Invariance)",
-            "📊 Biểu đồ: Item Characteristic Curves (ICC), Information Plot"
-        ]
+        "undergraduate": ["📌 Bước 1: Thống kê mô tả đặc điểm mẫu & Tần số (Descriptive)", "📌 Bước 2: Kiểm định Độ tin cậy thang đo (Cronbach's Alpha)", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy tuyến tính (OLS Regression) đánh giá tác động"],
+        "master": ["📌 Bước 1: Thống kê mô tả (Descriptive) & Làm sạch dữ liệu", "📌 Bước 2: Kiểm định Độ tin cậy (Cronbach's Alpha)", "📌 Bước 3: Phân tích Nhân tố khám phá (EFA) & KMO", "📌 Bước 4: Phân tích Tương quan (Correlation) & Đa cộng tuyến", "📌 Bước 5: Phân tích Hồi quy (Regression) & Kiểm định giả định", "📌 Bước 6: Kiểm định sự khác biệt nhóm (T-test/ANOVA)"],
+        "phd": ["📌 Bước 1: Thống kê mô tả chuyên sâu (Descriptive)", "📌 Bước 2: Kiểm định thang đo (Cronbach's Alpha) & EFA", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy OLS đa biến (Regression)", "📌 Bước 5: Phân tích cơ chế tác động trung gian (Mediation Model 4)", "📌 Bước 6: Kiểm định sự khác biệt đặc điểm nhân khẩu học (ANOVA/T-test)"],
+        "academic": ["📌 Bước 1: Đặc điểm mẫu & Thống kê mô tả (Descriptive)", "📌 Bước 2: Độ tin cậy (Cronbach) & Phân tích Nhân tố (EFA)", "📌 Bước 3: Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy đa biến OLS (Regression)", "📌 Bước 5: Tác động gián tiếp / Trung gian (Mediation)", "📌 Bước 6: Phân tích sai biệt nhóm (T-test/ANOVA)"]
     },
     "efa": {
-        "undergraduate": [
-            "📌 Bước 1: Kiểm định KMO & Bartlett's Test",
-            "📌 Bước 2: Trích nhân tố (Principal Components / Exploratory)",
-            "📌 Bước 3: Xoay nhân tố (Varimax) & Giải thích các nhóm",
-            "📊 Biểu đồ: Scree Plot (Xác định số nhân tố)"
-        ],
-        "master": [
-            "📌 Bước 1: Trích nhân tố bằng phương pháp Principal Axis Factoring",
-            "📌 Bước 2: Xoay nhân tố bằng phương pháp Oblique (Promax/Direct Oblimin)",
-            "📌 Bước 3: Kiểm tra tính hội tụ & phân biệt sơ bộ qua ma trận mẫu",
-            "📊 Biểu đồ: Biểu đồ ma trận xoay (Loading Plot)"
-        ],
-        "phd": [
-            "📌 Bước 1: Xây dựng mô hình nhân tố khẳng định (CFA)",
-            "📌 Bước 2: Kiểm định tính phù hợp mô hình (CFI, TLI, GFI, RMSEA)",
-            "📌 Bước 3: Hiệu chỉnh mô hình qua Modification Indices",
-            "📊 Biểu đồ: Sơ đồ CFA Diagram chuyên nghiệp"
-        ],
-        "academic": [
-            "📌 Bước 1: Mô hình hóa phương trình cấu trúc (SEM)",
-            "📌 Bước 2: Phân tích đa cấp (HLM / Multi-level Modeling)",
-            "📌 Bước 3: Phân tích dữ liệu mảng (Panel Data - FE/RE Models)",
-            "📌 Bước 4: Kiểm định tính bất biến của mô hình trên các nhóm mẫu",
-            "📊 Biểu đồ: SEM Path Diagram, Multilevel Growth Charts"
-        ]
+        "undergraduate": ["📌 Bước 1: Thống kê mô tả đặc điểm mẫu & Tần số (Descriptive)", "📌 Bước 2: Kiểm định Độ tin cậy thang đo (Cronbach's Alpha)", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy tuyến tính (OLS Regression) đánh giá tác động"],
+        "master": ["📌 Bước 1: Thống kê mô tả (Descriptive) & Làm sạch dữ liệu", "📌 Bước 2: Kiểm định Độ tin cậy (Cronbach's Alpha)", "📌 Bước 3: Phân tích Nhân tố khám phá (EFA) & KMO", "📌 Bước 4: Phân tích Tương quan (Correlation) & Đa cộng tuyến", "📌 Bước 5: Phân tích Hồi quy (Regression) & Kiểm định giả định", "📌 Bước 6: Kiểm định sự khác biệt nhóm (T-test/ANOVA)"],
+        "phd": ["📌 Bước 1: Thống kê mô tả chuyên sâu (Descriptive)", "📌 Bước 2: Kiểm định thang đo (Cronbach's Alpha) & EFA", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy OLS đa biến (Regression)", "📌 Bước 5: Phân tích cơ chế tác động trung gian (Mediation Model 4)", "📌 Bước 6: Kiểm định sự khác biệt đặc điểm nhân khẩu học (ANOVA/T-test)"],
+        "academic": ["📌 Bước 1: Đặc điểm mẫu & Thống kê mô tả (Descriptive)", "📌 Bước 2: Độ tin cậy (Cronbach) & Phân tích Nhân tố (EFA)", "📌 Bước 3: Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy đa biến OLS (Regression)", "📌 Bước 5: Tác động gián tiếp / Trung gian (Mediation)", "📌 Bước 6: Phân tích sai biệt nhóm (T-test/ANOVA)"]
     },
     "ttest_anova": {
-        "undergraduate": [
-            "📌 Bước 1: Kiểm định tính phân phối chuẩn & đồng nhất phương sai",
-            "📌 Bước 2: Thực hiện Independent T-test hoặc One-way ANOVA",
-            "📌 Bước 3: Giải thích ý nghĩa trị số p (Sig. < 0.05)",
-            "📊 Biểu đồ: Error Bar Chart, Biểu đồ cột so sánh trung bình"
-        ],
-        "master": [
-            "📌 Bước 1: Kiểm định Post-hoc (Tukey, LSD, Bonferroni) khi có sai biệt",
-            "📌 Bước 2: Tính toán kích thước hiệu ứng (Effect Size - Eta-squared)",
-            "📌 Bước 3: Thực hiện ANOVA hai nhân tố (Two-way ANOVA)",
-            "📊 Biểu đồ: Interaction Plot (Biểu đồ tương tác), Box Plot"
-        ],
-        "phd": [
-            "📌 Bước 1: Thực hiện phân tích hiệp biến (ANCOVA)",
-            "📌 Bước 2: Thực hiện phân tích đa biến (MANOVA)",
-            "📌 Bước 3: Kiểm định phi tham số (Kruskal-Wallis) nếu vi phạm giả định",
-            "📊 Biểu đồ: Multivariate Scatter Plot, Profile Plots"
-        ],
-        "academic": [
-            "📌 Bước 1: Phân tích so sánh đa cấp (Multi-level comparison)",
-            "📌 Bước 2: Thực hiện Bayesian ANOVA",
-            "📌 Bước 3: Tổng hợp kết quả so sánh qua Meta-analysis",
-            "📊 Biểu đồ: Bayesian Density Comparison, Forest Plot"
-        ]
+        "undergraduate": ["📌 Bước 1: Thống kê mô tả đặc điểm mẫu & Tần số (Descriptive)", "📌 Bước 2: Kiểm định Độ tin cậy thang đo (Cronbach's Alpha)", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy tuyến tính (OLS Regression) đánh giá tác động"],
+        "master": ["📌 Bước 1: Thống kê mô tả (Descriptive) & Làm sạch dữ liệu", "📌 Bước 2: Kiểm định Độ tin cậy (Cronbach's Alpha)", "📌 Bước 3: Phân tích Nhân tố khám phá (EFA) & KMO", "📌 Bước 4: Phân tích Tương quan (Correlation) & Đa cộng tuyến", "📌 Bước 5: Phân tích Hồi quy (Regression) & Kiểm định giả định", "📌 Bước 6: Kiểm định sự khác biệt nhóm (T-test/ANOVA)"],
+        "phd": ["📌 Bước 1: Thống kê mô tả chuyên sâu (Descriptive)", "📌 Bước 2: Kiểm định thang đo (Cronbach's Alpha) & EFA", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy OLS đa biến (Regression)", "📌 Bước 5: Phân tích cơ chế tác động trung gian (Mediation Model 4)", "📌 Bước 6: Kiểm định sự khác biệt đặc điểm nhân khẩu học (ANOVA/T-test)"],
+        "academic": ["📌 Bước 1: Đặc điểm mẫu & Thống kê mô tả (Descriptive)", "📌 Bước 2: Độ tin cậy (Cronbach) & Phân tích Nhân tố (EFA)", "📌 Bước 3: Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy đa biến OLS (Regression)", "📌 Bước 5: Tác động gián tiếp / Trung gian (Mediation)", "📌 Bước 6: Phân tích sai biệt nhóm (T-test/ANOVA)"]
     },
     "regression": {
-        "undergraduate": [
-            "📌 Bước 1: Kiểm định độ tin cậy & EFA cho các nhóm biến",
-            "📌 Bước 2: Tính toán giá trị đại diện nhân tố (Mean scores)",
-            "📌 Bước 3: Phân tích tương quan Pearson",
-            "📌 Bước 4: Hồi quy tuyến tính bội (Enter method)",
-            "📌 Bước 5: Kiểm định giả định hồi quy (VIF, Durbin-Watson)",
-            "📊 Biểu đồ: Regression Scatter, Normal P-P Plot"
-        ],
-        "master": [
-            "📌 Bước 1: Thực hiện CFA để khẳng định thang đo",
-            "📌 Bước 2: Hồi quy đa biến với phương pháp Stepwise/Hierarchy",
-            "📌 Bước 3: Phân tích biến trung gian đơn giản (Mediation - Model 4)",
-            "📌 Bước 4: Kiểm định phương sai sai số thay đổi (White test)",
-            "📊 Biểu đồ: Residuals Plot, Sơ đồ mô hình hồi quy chính thức"
-        ],
-        "phd": [
-            "📌 Bước 1: Phân tích mô hình trung gian & điều tiết phức hợp (Hayes Process Model 4, 7, 8, 14, 21, 58, 59)",
-            "📌 Bước 2: Thực hiện Bootstrapping để kiểm định tác động gián tiếp",
-            "📌 Bước 3: Kiểm định hiện tượng nội sinh (Endogeneity)",
-            "📌 Bước 4: So sánh các mô hình cạnh tranh (Model Comparison - AIC/BIC)",
-            "📊 Biểu đồ: Sơ đồ Hayes Process Model, Slopes Analysis Chart"
-        ],
-        "academic": [
-            "📌 Bước 1: Mô hình hóa phương trình cấu trúc (SEM)",
-            "📌 Bước 2: Phân tích đa cấp (HLM / Multi-level Modeling)",
-            "📌 Bước 3: Phân tích dữ liệu mảng (Panel Data - FE/RE Models)",
-            "📌 Bước 4: Kiểm định tính bất biến của mô hình trên các nhóm mẫu",
-            "📊 Biểu đồ: SEM Path Diagram, Multilevel Growth Charts"
-        ]
-    }
+        "undergraduate": ["📌 Bước 1: Thống kê mô tả đặc điểm mẫu & Tần số (Descriptive)", "📌 Bước 2: Kiểm định Độ tin cậy thang đo (Cronbach's Alpha)", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy tuyến tính (OLS Regression) đánh giá tác động"],
+        "master": ["📌 Bước 1: Thống kê mô tả (Descriptive) & Làm sạch dữ liệu", "📌 Bước 2: Kiểm định Độ tin cậy (Cronbach's Alpha)", "📌 Bước 3: Phân tích Nhân tố khám phá (EFA) & KMO", "📌 Bước 4: Phân tích Tương quan (Correlation) & Đa cộng tuyến", "📌 Bước 5: Phân tích Hồi quy (Regression) & Kiểm định giả định", "📌 Bước 6: Kiểm định sự khác biệt nhóm (T-test/ANOVA)"],
+        "phd": ["📌 Bước 1: Thống kê mô tả chuyên sâu (Descriptive)", "📌 Bước 2: Kiểm định thang đo (Cronbach's Alpha) & EFA", "📌 Bước 3: Phân tích Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy OLS đa biến (Regression)", "📌 Bước 5: Phân tích cơ chế tác động trung gian (Mediation Model 4)", "📌 Bước 6: Kiểm định sự khác biệt đặc điểm nhân khẩu học (ANOVA/T-test)"],
+        "academic": ["📌 Bước 1: Đặc điểm mẫu & Thống kê mô tả (Descriptive)", "📌 Bước 2: Độ tin cậy (Cronbach) & Phân tích Nhân tố (EFA)", "📌 Bước 3: Tương quan Pearson (Correlation)", "📌 Bước 4: Hồi quy đa biến OLS (Regression)", "📌 Bước 5: Tác động gián tiếp / Trung gian (Mediation)", "📌 Bước 6: Phân tích sai biệt nhóm (T-test/ANOVA)"]
+    },
 }
-
 RESOURCES_AI = {
     "descriptive": {
         "undergraduate": {
