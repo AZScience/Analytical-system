@@ -1602,6 +1602,146 @@ def clean_data(df):
     
     return df_clean, logs
 
+
+def render_analysis_step(step_lower, desc_res, cronbach, efa, corr, reg, groups, mediation):
+    results_shown = False
+    
+    # 0. Thống kê mô tả / Tần số / Trung bình / Làm sạch / Phân phối / Biến động / Ngoại lai / Đại diện
+    if any(k in step_lower for k in ["mô tả", "tần số", "trung bình", "làm sạch", "descriptive", "phân phối", "skewness", "kurtosis", "biến động", "chi tiết", "ngoại lai", "đại diện", "chuẩn hóa", "đặc điểm", "mẫu"]):
+        results_shown = True
+        if desc_res:
+            st.markdown("### 👥 Đặc điểm mẫu & Thống kê mô tả")
+            with st.expander("🎓 **Công thức & Cách tính Thống kê mô tả**"):
+                st.latex(r"\bar{X} = \frac{\sum_{i=1}^{n} X_i}{n} \quad ; \quad S = \sqrt{\frac{\sum_{i=1}^{n} (X_i - \bar{X})^2}{n-1}}")
+                st.markdown('''
+                **Giải thích chỉ số & Viết tắt:**
+                - **Mean ($\bar{X}$):** Giá trị trung bình. Cho biết mức độ đánh giá chung (ví dụ: $3.5$ là mức Khá).
+                - **Std. Deviation (S):** Độ lệch chuẩn. Đo lường mức độ phân tán của dữ liệu. $S$ càng nhỏ, ý kiến các đối tượng khảo sát càng đồng nhất.
+                - **n:** Số mẫu quan sát.
+                ''')
+            # Nhân khẩu học
+            st.subheader("📊 Nhân khẩu học")
+            st.table(desc_res["demographics"])
+            
+            st.write("") # Khoảng cách
+            
+            # Thống kê thang đo Likert
+            st.subheader("📈 Thống kê thang đo Likert")
+            st.dataframe(desc_res["stats"], use_container_width=True)
+            
+            if Path("outputs/chart_1_mean.png").exists():
+                st.image("outputs/chart_1_mean.png", use_container_width=True)
+                render_chart_note(
+                    title="Biểu đồ Mean các nhân tố chính",
+                    scientific="Giá trị trung bình đại diện cho mức độ tập trung của dữ liệu trên thang đo Likert 1-5.",
+                    mathematical="Mean = (Σx_i) / n. Giá trị trung bình phản ánh khuynh hướng hội tụ của ý kiến đánh giá.",
+                    practical="Phản ánh mức độ hài lòng hoặc đánh giá thực tế của đối tượng khảo sát về từng khía cạnh.",
+                    current_status="Đang hiển thị mức đánh giá trung bình cho các nhân tố trong mô hình.",
+                    evaluation="Các nhân tố đạt trên ngưỡng 3.5 được xem là có mức đánh giá tốt.",
+                    proposal="Tập trung nguồn lực vào các nhân tố có điểm Mean thấp nhất để cải thiện hiệu quả."
+                )
+            
+            with st.expander("📝 Giải thích các chỉ số cốt lõi (n, KMO, R2, Sạch)"):
+                st.write("**Số quan sát (n):**")
+                st.info("Khoa học: Cỡ mẫu của nghiên cứu. Thực tiễn: Đại diện cho tệp khách hàng/sinh viên. Đề xuất: n=400 là mức lý tưởng cho các mô hình hồi quy đa biến.")
+                st.write("**KMO (Kaiser-Meyer-Olkin):**")
+                st.info("Khoa học: Chỉ số đo lường sự phù hợp của dữ liệu để phân tích nhân tố. Đạt khi >= 0.5.")
+                st.write("**R-squared (R²):**")
+                st.info("Khoa học: Hệ số xác định. Cho biết mức độ giải thích của các biến độc lập cho sự biến thiên của biến phụ thuộc.")
+                st.write("**Làm sạch Dữ liệu:**")
+                st.info("Hệ thống đã tự động xử lý các giá trị khuyết và loại bỏ các trường hợp có xu hướng trả lời 'thẳng hàng' (Straight-lining).")
+
+    # 1. Độ tin cậy (Cronbach's Alpha)
+    if any(k in step_lower for k in ["tin cậy", "reliability", "cronbach", "alpha", "thang đo", "nhất quán"]):
+        results_shown = True
+        st.markdown("### 🛡️ Kiểm định Độ tin cậy (Cronbach's Alpha)")
+        if cronbach:
+            render_scientific_conclusion("reliability", cronbach)
+            for var, res in cronbach.items():
+                with st.expander(f"📦 Thang đo: {var} (Alpha: {res['alpha']:.3f})"):
+                    st.table(res["table"])
+                    if res["alpha"] >= 0.7:
+                        st.success(f"✅ Thang đo '{var}' đạt độ tin cậy tốt (>= 0.7).")
+                    else:
+                        st.warning(f"⚠️ Thang đo '{var}' cần xem lại (Alpha < 0.7). Cần loại biến có ITC thấp.")
+        else:
+            st.warning("Chưa có kết quả kiểm định độ tin cậy.")
+
+    # 2. Nhân tố (EFA)
+    if any(k in step_lower for k in ["nhân tố", "efa", "kmo", "bartlett", "gom nhóm", "hội tụ", "phân biệt", "trích"]):
+        results_shown = True
+        st.markdown("### 🧩 Phân tích Nhân tố Khám phá (EFA)")
+        if efa:
+            st.info(f"Chỉ số KMO: **{efa['kmo']:.3f}** (Yêu cầu >= 0.5) | Sig. Bartlett: **{efa['bartlett_sig']:.4f}** (Yêu cầu < 0.05)")
+            st.dataframe(efa["rotated_matrix"], use_container_width=True)
+            if Path("outputs/chart_4_efa_scree.png").exists():
+                st.image("outputs/chart_4_efa_scree.png", use_container_width=True)
+            render_scientific_conclusion("efa", efa)
+        else:
+            st.warning("Chưa có kết quả phân tích nhân tố.")
+
+    # 3. Tương quan (Correlation)
+    if any(k in step_lower for k in ["tương quan", "correlation", "mối quan hệ", "pearson"]):
+        results_shown = True
+        st.markdown("### 🔗 Phân tích Tương quan Pearson")
+        if not corr.empty:
+            st.dataframe(corr, use_container_width=True)
+            if Path("outputs/chart_3_correlation.png").exists():
+                st.image("outputs/chart_3_correlation.png", use_container_width=True)
+            render_scientific_conclusion("correlation", corr)
+        else:
+            st.warning("Chưa có kết quả phân tích tương quan.")
+
+    # 4. Hồi quy (Regression)
+    if any(k in step_lower for k in ["hồi quy", "regression", "tác động", "ảnh hưởng", "nhân tố ảnh hưởng", "ols", "mô hình"]):
+        results_shown = True
+        st.markdown("### 🚀 Phân tích Hồi quy Tuyến tính")
+        if reg:
+            for m_id, m_data in reg.items():
+                with st.expander(f"📈 Mô hình: {m_id} (Biến phụ thuộc: {m_data['Y_label']})", expanded=True):
+                    st.write(f"Hệ số xác định R²: **{m_data['result']['R2']:.3f}**")
+                    st.table(m_data["result"]["table"])
+            if Path("outputs/chart_5_regression_beta.png").exists():
+                st.image("outputs/chart_5_regression_beta.png", use_container_width=True)
+            render_scientific_conclusion("regression", reg)
+        else:
+            st.warning("Chưa có kết quả phân tích hồi quy.")
+
+    # 5. Kiểm định nhóm (Difference/Group Tests)
+    if any(k in step_lower for k in ["khác biệt", "so sánh", "t-test", "anova", "kiểm định t", "phân nhóm"]):
+        results_shown = True
+        st.markdown("### ⚖️ Kiểm định Sự khác biệt (T-test/ANOVA)")
+        if groups:
+            for g_id, g_res in groups.items():
+                with st.expander(f"👥 So sánh theo: {g_id}", expanded=True):
+                    st.table(g_res["table"])
+                    st.success(f"**Kết luận:** {g_res['conclusion']}")
+            render_scientific_conclusion("ttest_anova", groups)
+        else:
+            st.warning("Chưa thực hiện kiểm định nhóm.")
+
+    # Phân tích trung gian (Mediation)
+    if any(k in step_lower for k in ["trung gian", "mediation", "model 4", "gián tiếp", "sobel", "cơ chế"]):
+        results_shown = True
+        st.markdown("### 🧬 Phân tích Cơ chế Tác động trung gian (Mediation Model 4)")
+        if mediation:
+            render_scientific_conclusion("mediation", mediation)
+        else:
+            st.warning("Chưa có kết quả phân tích tác động trung gian.")
+
+    # 6. Biểu đồ
+    if any(k in step_lower for k in ["biểu đồ", "chart", "📊"]):
+        chart_files = list(Path("outputs").glob("chart_*.png"))
+        if chart_files:
+            results_shown = True
+            st.markdown("### 📊 Minh họa trực quan")
+            for cf in chart_files:
+                st.image(str(cf), caption=f"Hình: {cf.stem}")
+
+    if not results_shown:
+        st.info("Bước này hiện chưa có dữ liệu tính toán trực tiếp.")
+
+
 def perform_analysis(df, progress_callback=None):
     """Thực hiện tính toán chọn lọc dựa trên Lộ trình hiện tại"""
     import time
@@ -2472,6 +2612,27 @@ if menu_selection == "🤖 Trợ lý Phân tích Nghiên cứu":
         if roadmap:
             for step in roadmap:
                 st.markdown(f"✅ {step}")
+            
+            st.write("")
+            if st.button("🚀 Thực thi Toàn bộ Lộ trình & In Báo cáo chi tiết ngay tại đây", use_container_width=True, type="primary"):
+                if st.session_state.df is None:
+                    st.error("⚠️ Vui lòng chuyển sang tab '📥 Quản lý Dữ liệu' để nạp dữ liệu mẫu trước khi tính toán.")
+                else:
+                    with st.status("🔄 Hệ thống đang xử lý dữ liệu và tính toán...", expanded=True) as status:
+                        def update_status(step_name, ratio):
+                            st.write(f"⚙️ **{step_name}** ({int(ratio*100)}%)")
+                        st.session_state.results = perform_analysis(st.session_state.df, progress_callback=update_status)
+                        status.update(label="✅ Phân tích hoàn tất!", state="complete")
+                    st.session_state.show_full_report_on_ai_page = True
+                    st.rerun()
+
+            if st.session_state.get("show_full_report_on_ai_page") and st.session_state.get("results") is not None:
+                st.markdown("---")
+                st.header("📑 BÁO CÁO PHÂN TÍCH CHI TIẾT (FULL REPORT)")
+                for step in roadmap:
+                    st.markdown(f"## {step}")
+                    render_analysis_step(step.lower(), desc_res, cronbach, efa, corr, reg, groups, mediation)
+                    st.write("")
         else:
             st.warning("Chưa có lộ trình chi tiết.")
 
@@ -3170,144 +3331,8 @@ elif menu_selection in current_roadmap:
             st.rerun()
         st.stop()
     
-    # Logic hiển thị kết quả dựa trên từ khóa (Có thể hiển thị nhiều kết quả nếu bước chứa nhiều từ khóa)
     step_lower = menu_selection.lower()
-    results_shown = False
-    
-    # 0. Thống kê mô tả / Tần số / Trung bình / Làm sạch / Phân phối / Biến động / Ngoại lai / Đại diện
-    if any(k in step_lower for k in ["mô tả", "tần số", "trung bình", "làm sạch", "descriptive", "phân phối", "skewness", "kurtosis", "biến động", "chi tiết", "ngoại lai", "đại diện", "chuẩn hóa", "đặc điểm", "mẫu"]):
-        results_shown = True
-        if desc_res:
-            st.markdown("### 👥 Đặc điểm mẫu & Thống kê mô tả")
-            with st.expander("🎓 **Công thức & Cách tính Thống kê mô tả**"):
-                st.latex(r"\bar{X} = \frac{\sum_{i=1}^{n} X_i}{n} \quad ; \quad S = \sqrt{\frac{\sum_{i=1}^{n} (X_i - \bar{X})^2}{n-1}}")
-                st.markdown("""
-                **Giải thích chỉ số & Viết tắt:**
-                - **Mean ($\bar{X}$):** Giá trị trung bình. Cho biết mức độ đánh giá chung (ví dụ: $3.5$ là mức Khá).
-                - **Std. Deviation (S):** Độ lệch chuẩn. Đo lường mức độ phân tán của dữ liệu. $S$ càng nhỏ, ý kiến các đối tượng khảo sát càng đồng nhất.
-                - **n:** Số mẫu quan sát.
-                """)
-            # Nhân khẩu học
-            st.subheader("📊 Nhân khẩu học")
-            st.table(desc_res["demographics"])
-            
-            st.write("") # Khoảng cách
-            
-            # Thống kê thang đo Likert
-            st.subheader("📈 Thống kê thang đo Likert")
-            st.dataframe(desc_res["stats"], use_container_width=True)
-            
-            if Path("outputs/chart_1_mean.png").exists():
-                st.image("outputs/chart_1_mean.png", use_container_width=True)
-                render_chart_note(
-                    title="Biểu đồ Mean các nhân tố chính",
-                    scientific="Giá trị trung bình đại diện cho mức độ tập trung của dữ liệu trên thang đo Likert 1-5.",
-                    mathematical="Mean = (Σx_i) / n. Giá trị trung bình phản ánh khuynh hướng hội tụ của ý kiến đánh giá.",
-                    practical="Phản ánh mức độ hài lòng hoặc đánh giá thực tế của đối tượng khảo sát về từng khía cạnh.",
-                    current_status="Đang hiển thị mức đánh giá trung bình cho các nhân tố trong mô hình.",
-                    evaluation="Các nhân tố đạt trên ngưỡng 3.5 được xem là có mức đánh giá tốt.",
-                    proposal="Tập trung nguồn lực vào các nhân tố có điểm Mean thấp nhất để cải thiện hiệu quả."
-                )
-            
-            with st.expander("📝 Giải thích các chỉ số cốt lõi (n, KMO, R2, Sạch)"):
-                st.write("**Số quan sát (n):**")
-                st.info("Khoa học: Cỡ mẫu của nghiên cứu. Thực tiễn: Đại diện cho tệp khách hàng/sinh viên. Đề xuất: n=400 là mức lý tưởng cho các mô hình hồi quy đa biến.")
-                st.write("**KMO (Kaiser-Meyer-Olkin):**")
-                st.info("Khoa học: Chỉ số đo lường sự phù hợp của dữ liệu để phân tích nhân tố. Đạt khi >= 0.5.")
-                st.write("**R-squared (R²):**")
-                st.info("Khoa học: Hệ số xác định. Cho biết mức độ giải thích của các biến độc lập cho sự biến thiên của biến phụ thuộc.")
-                st.write("**Làm sạch Dữ liệu:**")
-                st.info("Hệ thống đã tự động xử lý các giá trị khuyết và loại bỏ các trường hợp có xu hướng trả lời 'thẳng hàng' (Straight-lining).")
-
-    # 1. Độ tin cậy (Cronbach's Alpha)
-    if any(k in step_lower for k in ["tin cậy", "reliability", "cronbach", "alpha", "thang đo", "nhất quán"]):
-        results_shown = True
-        st.markdown("### 🛡️ Kiểm định Độ tin cậy (Cronbach's Alpha)")
-        if cronbach:
-            render_scientific_conclusion("reliability", cronbach)
-            for var, res in cronbach.items():
-                with st.expander(f"📦 Thang đo: {var} (Alpha: {res['alpha']:.3f})"):
-                    st.table(res["table"])
-                    if res["alpha"] >= 0.7:
-                        st.success(f"✅ Thang đo '{var}' đạt độ tin cậy tốt (>= 0.7).")
-                    else:
-                        st.warning(f"⚠️ Thang đo '{var}' cần xem lại (Alpha < 0.7). Cần loại biến có ITC thấp.")
-        else:
-            st.warning("Chưa có kết quả kiểm định độ tin cậy.")
-
-    # 2. Nhân tố (EFA)
-    if any(k in step_lower for k in ["nhân tố", "efa", "kmo", "bartlett", "gom nhóm", "hội tụ", "phân biệt", "trích"]):
-        results_shown = True
-        st.markdown("### 🧩 Phân tích Nhân tố Khám phá (EFA)")
-        if efa:
-            st.info(f"Chỉ số KMO: **{efa['kmo']:.3f}** (Yêu cầu >= 0.5) | Sig. Bartlett: **{efa['bartlett_sig']:.4f}** (Yêu cầu < 0.05)")
-            st.dataframe(efa["rotated_matrix"], use_container_width=True)
-            if Path("outputs/chart_4_efa_scree.png").exists():
-                st.image("outputs/chart_4_efa_scree.png", use_container_width=True)
-            render_scientific_conclusion("efa", efa)
-        else:
-            st.warning("Chưa có kết quả phân tích nhân tố.")
-
-    # 3. Tương quan (Correlation)
-    if any(k in step_lower for k in ["tương quan", "correlation", "mối quan hệ", "pearson"]):
-        results_shown = True
-        st.markdown("### 🔗 Phân tích Tương quan Pearson")
-        if not corr.empty:
-            st.dataframe(corr, use_container_width=True)
-            if Path("outputs/chart_3_correlation.png").exists():
-                st.image("outputs/chart_3_correlation.png", use_container_width=True)
-            render_scientific_conclusion("correlation", corr)
-        else:
-            st.warning("Chưa có kết quả phân tích tương quan.")
-
-    # 4. Hồi quy (Regression)
-    if any(k in step_lower for k in ["hồi quy", "regression", "tác động", "ảnh hưởng", "nhân tố ảnh hưởng", "ols", "mô hình"]):
-        results_shown = True
-        st.markdown("### 🚀 Phân tích Hồi quy Tuyến tính")
-        if reg:
-            for m_id, m_data in reg.items():
-                with st.expander(f"📈 Mô hình: {m_id} (Biến phụ thuộc: {m_data['Y_label']})", expanded=True):
-                    st.write(f"Hệ số xác định R²: **{m_data['result']['R2']:.3f}**")
-                    st.table(m_data["result"]["table"])
-            if Path("outputs/chart_5_regression_beta.png").exists():
-                st.image("outputs/chart_5_regression_beta.png", use_container_width=True)
-            render_scientific_conclusion("regression", reg)
-        else:
-            st.warning("Chưa có kết quả phân tích hồi quy.")
-
-    # 5. Kiểm định nhóm (Difference/Group Tests)
-    if any(k in step_lower for k in ["khác biệt", "so sánh", "t-test", "anova", "kiểm định t", "phân nhóm"]):
-        results_shown = True
-        st.markdown("### ⚖️ Kiểm định Sự khác biệt (T-test/ANOVA)")
-        if groups:
-            for g_id, g_res in groups.items():
-                with st.expander(f"👥 So sánh theo: {g_id}", expanded=True):
-                    st.table(g_res["table"])
-                    st.success(f"**Kết luận:** {g_res['conclusion']}")
-            render_scientific_conclusion("ttest_anova", groups)
-        else:
-            st.warning("Chưa thực hiện kiểm định nhóm.")
-
-    # Phân tích trung gian (Mediation)
-    if any(k in step_lower for k in ["trung gian", "mediation", "model 4", "gián tiếp", "sobel", "cơ chế"]):
-        results_shown = True
-        st.markdown("### 🧬 Phân tích Cơ chế Tác động trung gian (Mediation Model 4)")
-        if mediation:
-            render_scientific_conclusion("mediation", mediation)
-        else:
-            st.warning("Chưa có kết quả phân tích tác động trung gian.")
-
-    # 6. Biểu đồ
-    if any(k in step_lower for k in ["biểu đồ", "chart", "📊"]):
-        chart_files = list(Path("outputs").glob("chart_*.png"))
-        if chart_files:
-            results_shown = True
-            st.markdown("### 📊 Minh họa trực quan")
-            for cf in chart_files:
-                st.image(str(cf), caption=f"Hình: {cf.stem}")
-
-    if not results_shown:
-        st.info("Bước này hiện chưa có dữ liệu tính toán trực tiếp.")
+    render_analysis_step(step_lower, desc_res, cronbach, efa, corr, reg, groups, mediation)
     
     st.info("💡 Bạn có thể tiếp tục bước tiếp theo trong lộ trình tại Menu bên trái.")
 
